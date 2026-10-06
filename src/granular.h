@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define MAX_VOICES 8
-#define MAX_GRAINS 128
+#define MAX_VOICES 16
+#define MAX_GRAINS 256
 #define HANN_LUT_SIZE 2048
 #define SAMPLE_BUFFER_SIZE 96000
 
@@ -28,6 +28,7 @@ typedef struct {
 typedef struct {
     double sample_rate;
     float playhead;
+    uint32_t next_voice_rr;
 
     float sample_buffer[SAMPLE_BUFFER_SIZE];
     float hann_lut[HANN_LUT_SIZE];
