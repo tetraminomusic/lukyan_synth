@@ -29,6 +29,6 @@ set_target_properties(granular_synth PROPERTIES
 if(APPLE)
     set_target_properties(granular_synth PROPERTIES 
         BUNDLE TRUE
-        BUNDLE_EXTENSION "clap"`
+        BUNDLE_EXTENSION "clap"
     )
 endif()
