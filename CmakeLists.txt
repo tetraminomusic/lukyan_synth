@@ -16,7 +16,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(clap)
 
-add_library(granular_synth MODULE src/plugin.c)
+add_library(granular_synth MODULE 
+    src/plugin.c
+    src/granular.c
+)
 
 target_link_libraries(granular_synth PRIVATE clap)
 target_include_directories(granular_synth PRIVATE src)
