@@ -30,6 +30,10 @@ typedef struct {
     float playhead;
     uint32_t next_voice_rr;
 
+    float grain_size_ms;
+    float density;
+    float spray;
+
     float sample_buffer[SAMPLE_BUFFER_SIZE];
     float hann_lut[HANN_LUT_SIZE];
     Grain grains[MAX_GRAINS];
@@ -40,6 +44,9 @@ void granular_init(GranularEngine *engine, double sample_rate);
 void granular_note_on(GranularEngine *engine, int32_t key, float frequency);
 void granular_note_off(GranularEngine *engine, int32_t key);
 void granular_reset(GranularEngine *engine);
+void granular_set_grain_size(GranularEngine *engine, float size_ms);
+void granular_set_density(GranularEngine *engine, float density);
+void granular_set_spray(GranularEngine *engine, float spray);
 void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r);
 
 #endif
