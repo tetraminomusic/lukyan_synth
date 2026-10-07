@@ -1,4 +1,4 @@
-name: Build CLAP Plugin
+name: Build CLAP and VST3 Plugins
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-windows:
-    name: Build Windows (x86-64)
+    name: Build Windows (CLAP + VST3)
     runs-on: windows-latest
 
     steps:
@@ -19,14 +19,32 @@ jobs:
       - name: Configure CMake
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
-      - name: Compile Plugin
+      - name: Compile CLAP Plugin
         run: cmake --build build --config Release
 
-      - name: Upload Windows Plugin Artifact
+      - name: Clone and Build clap-wrapper
+        run: |
+          git clone --recursive https://github.com/free-audio/clap-wrapper.git
+          cd clap-wrapper
+          cmake -B build -DCLAP_WRAPPER_DOWNLOAD_DEPENDENCIES=TRUE
+          cmake --build build --config Release
+          cd ..
+
+      - name: Package VST3 Plugin
+        shell: bash
+        run: |
+          mkdir -p "build/Release/Lukyan Synth.vst3/Contents/x86_64-win"
+          mkdir -p "build/Release/Lukyan Synth.vst3/Contents/Resources"
+          cp clap-wrapper/build/clapasvst3.vst3/Contents/x86_64-win/clapasvst3.vst3 "build/Release/Lukyan Synth.vst3/Contents/x86_64-win/Lukyan Synth.vst3"
+          cp "build/Release/Lukyan Synth.clap" "build/Release/Lukyan Synth.vst3/Contents/Resources/"
+
+      - name: Upload Windows Plugins (CLAP + VST3)
         uses: actions/upload-artifact@v4
         with:
-          name: Lukyan-Synth-Windows
-          path: build/**/Lukyan Synth.clap
+          name: Lukyan-Synth-Windows-Complete
+          path: |
+            build/Release/Lukyan Synth.clap
+            build/Release/Lukyan Synth.vst3
 
   build-macos:
     name: Build macOS (Bundle)
@@ -42,7 +60,7 @@ jobs:
       - name: Compile Plugin
         run: cmake --build build --config Release
 
-      - name: Upload macOS Plugin Artifact
+      - name: Upload macOS Plugin
         uses: actions/upload-artifact@v4
         with:
           name: Lukyan-Synth-macOS
