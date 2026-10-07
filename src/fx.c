@@ -12,8 +12,8 @@ void fx_state_init(FxState *state) {
 }
 
 void fx_process(FxState *state, const FxParams *params, float *out_l, float *out_r) {
-    float raw_l = tanhf(*out_l * 1.15f) * 0.85f * params->gain;
-    float raw_r = tanhf(*out_r * 1.15f) * 0.85f * params->gain;
+    float raw_l = tanhf(*out_l * 2.0f) * 0.95f * params->gain;
+    float raw_r = tanhf(*out_r * 2.0f) * 0.95f * params->gain;
 
     if (params->downsample > 1.05f) {
         state->ds_counter += 1.0f;
