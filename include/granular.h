@@ -3,21 +3,14 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "adsr.h"
+#include "fx.h"
+#include "oscillator.h"
 
 #define MAX_VOICES 16
 #define MAX_GRAINS 256
 #define HANN_LUT_SIZE 2048
-#define SAMPLE_BUFFER_SIZE 96000
-#define NUM_WAVEFORMS 4
 #define NUM_OSCS 3
-
-typedef enum {
-    ADSR_IDLE = 0,
-    ADSR_ATTACK,
-    ADSR_DECAY,
-    ADSR_SUSTAIN,
-    ADSR_RELEASE
-} AdsrState;
 
 typedef struct {
     bool active;
@@ -34,8 +27,7 @@ typedef struct {
     int32_t key;
     float frequency;
     float spawn_timer;
-    AdsrState adsr_state;
-    float adsr_value;
+    AdsrVoice adsr;
 } Voice;
 
 typedef struct {
@@ -46,31 +38,16 @@ typedef struct {
     float grain_size_ms;
     float density;
     float spray;
-    float gain;
-    float tone;
+    float pitch_bend_semitones;
 
     float osc_gain[NUM_OSCS];
     float osc_semi[NUM_OSCS];
     float osc_morph[NUM_OSCS];
 
-    float attack_ms;
-    float decay_ms;
-    float sustain;
-    float release_ms;
+    AdsrParams adsr_params;
+    FxParams fx_params;
+    FxState fx_state;
 
-    float crush_bits;
-    float downsample;
-    float ds_counter;
-    float held_sample_l;
-    float held_sample_r;
-    float pitch_bend_semitones;
-
-    float lp_l;
-    float lp_r;
-    float hp_l;
-    float hp_r;
-
-    float sample_buffers[NUM_WAVEFORMS][SAMPLE_BUFFER_SIZE];
     float hann_lut[HANN_LUT_SIZE];
     Grain grains[MAX_GRAINS];
     Voice voices[MAX_VOICES];
