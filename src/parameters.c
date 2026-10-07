@@ -17,7 +17,7 @@ typedef struct {
 } ParamDef;
 
 static void fmt_ms(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.1f ms", val); }
-static void fmt_hz(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.1f Hz", val); }
+static void fmt_hz(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.0f Hz", val); }
 static void fmt_gr_s(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.1f gr/s", val); }
 static void fmt_norm(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.2f", val); }
 static void fmt_pct(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.0f %%", val * 100.0); }
@@ -58,6 +58,10 @@ static void app_chorus_mix(GranularEngine *e, double v) { e->fx_params.chorus_mi
 static void app_chorus_rate(GranularEngine *e, double v) { e->fx_params.chorus_rate_hz = (float)v; }
 static void app_chorus_depth(GranularEngine *e, double v) { e->fx_params.chorus_depth_ms = (float)v; }
 
+static void app_reverb_mix(GranularEngine *e, double v) { e->fx_params.reverb_mix = (float)v; }
+static void app_reverb_size(GranularEngine *e, double v) { e->fx_params.reverb_size = (float)v; }
+static void app_reverb_damp(GranularEngine *e, double v) { e->fx_params.reverb_damp = (float)v; }
+
 static void app_osc1_gain(GranularEngine *e, double v) { granular_set_osc_gain(e, 0, (float)v); }
 static void app_osc1_semi(GranularEngine *e, double v) { granular_set_osc_semi(e, 0, (float)v); }
 static void app_osc1_morph(GranularEngine *e, double v) { granular_set_osc_morph(e, 0, (float)v); }
@@ -92,6 +96,10 @@ static const ParamDef DEFS[PARAM_COUNT] = {
     { PARAM_CHORUS_MIX, "Chorus Mix", 0.0, 1.0, 0.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_pct, app_chorus_mix },
     { PARAM_CHORUS_RATE, "Chorus Rate", 0.1, 5.0, 1.2, CLAP_PARAM_IS_AUTOMATABLE, fmt_hz, app_chorus_rate },
     { PARAM_CHORUS_DEPTH, "Chorus Depth", 0.0, 20.0, 5.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_ms, app_chorus_depth },
+
+    { PARAM_REVERB_MIX, "Reverb Mix", 0.0, 1.0, 0.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_pct, app_reverb_mix },
+    { PARAM_REVERB_SIZE, "Reverb Size", 0.0, 0.98, 0.75, CLAP_PARAM_IS_AUTOMATABLE, fmt_pct, app_reverb_size },
+    { PARAM_REVERB_DAMP, "Reverb Damp", 0.0, 1.0, 0.25, CLAP_PARAM_IS_AUTOMATABLE, fmt_pct, app_reverb_damp },
 
     { PARAM_OSC1_GAIN, "Osc 1 Gain", 0.0, 1.0, 0.80, CLAP_PARAM_IS_AUTOMATABLE, fmt_pct, app_osc1_gain },
     { PARAM_OSC1_SEMI, "Osc 1 Semi", -24.0, 24.0, 0.0, CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED, fmt_semi, app_osc1_semi },

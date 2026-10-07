@@ -2,6 +2,8 @@
 #define FX_H
 
 #define CHORUS_BUFFER_SIZE 96000
+#define NUM_COMB 4
+#define NUM_APF 2
 
 typedef struct {
     float crush_bits;
@@ -18,6 +20,10 @@ typedef struct {
     float chorus_mix;
     float chorus_rate_hz;
     float chorus_depth_ms;
+
+    float reverb_mix;
+    float reverb_size;
+    float reverb_damp;
 } FxParams;
 
 typedef struct {
@@ -36,6 +42,18 @@ typedef struct {
     float chorus_buf_r[CHORUS_BUFFER_SIZE];
     int write_pos;
     float chorus_lfo_phase;
+
+    float comb_buf_l[NUM_COMB][2000];
+    float comb_buf_r[NUM_COMB][2000];
+    int comb_pos_l[NUM_COMB];
+    int comb_pos_r[NUM_COMB];
+    float comb_filter_l[NUM_COMB];
+    float comb_filter_r[NUM_COMB];
+
+    float apf_buf_l[NUM_APF][600];
+    float apf_buf_r[NUM_APF][600];
+    int apf_pos_l[NUM_APF];
+    int apf_pos_r[NUM_APF];
 } FxState;
 
 void fx_state_init(FxState *state);
