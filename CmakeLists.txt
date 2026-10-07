@@ -34,6 +34,8 @@ target_include_directories(granular_synth PRIVATE include src)
 
 if(APPLE)
     target_link_libraries(granular_synth PRIVATE "-framework Cocoa" "-framework CoreGraphics")
+elseif(WIN32)
+    target_link_libraries(granular_synth PRIVATE gdi32 user32)
 endif()
 
 set_target_properties(granular_synth PROPERTIES
