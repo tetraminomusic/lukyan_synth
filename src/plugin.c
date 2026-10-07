@@ -7,6 +7,7 @@
 #include "parameters.h"
 #include "ports.h"
 #include "events.h"
+#include "gui.h"
 
 static uint32_t plugin_params_count(const clap_plugin_t *plugin) {
     (void)plugin;
@@ -66,7 +67,15 @@ static bool plugin_activate(const struct clap_plugin *plugin, double sample_rate
     GranularSynth *synth = (GranularSynth *)plugin->plugin_data;
 
     granular_init(&synth->engine, sample_rate);
-    params_init_defaults(synth);
+
+    for (int i = 0; i < PARAM_COUNT; ++i) {
+        params_apply_value(synth, i, synth->values[i]);
+    }
+
+    if (synth->gui.is_open) {
+        gui_render_frame(synth);
+    }
+
     return true;
 }
 
@@ -159,6 +168,8 @@ static const clap_plugin_t* factory_create_plugin(const struct clap_plugin_facto
     synth->plugin.desc = &plugin_descriptor;
     synth->plugin.plugin_data = synth;
     synth->host = host;
+
+    params_init_defaults(synth);
 
     return &synth->plugin;
 }
