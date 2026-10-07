@@ -37,11 +37,17 @@ void granular_init(GranularEngine *engine, double sample_rate) {
     engine->density = 30.0f;
     engine->spray = 0.15f;
 
+    engine->attack_ms = 20.0f;
+    engine->decay_ms = 200.0f;
+    engine->sustain = 0.75f;
+    engine->release_ms = 350.0f;
+
     init_hann_lut(engine);
     init_sample_buffer(engine);
 
     for (int i = 0; i < MAX_GRAINS; ++i) {
         engine->grains[i].active = false;
+        engine->grains[i].amp = 1.0f;
     }
 
     for (int v = 0; v < MAX_VOICES; ++v) {
@@ -49,6 +55,8 @@ void granular_init(GranularEngine *engine, double sample_rate) {
         engine->voices[v].key = -1;
         engine->voices[v].frequency = 440.0f;
         engine->voices[v].spawn_timer = 0.0f;
+        engine->voices[v].adsr_state = ADSR_IDLE;
+        engine->voices[v].adsr_value = 0.0f;
     }
 }
 
@@ -62,6 +70,22 @@ void granular_set_density(GranularEngine *engine, float density) {
 
 void granular_set_spray(GranularEngine *engine, float spray) {
     engine->spray = spray;
+}
+
+void granular_set_attack(GranularEngine *engine, float attack_ms) {
+    engine->attack_ms = attack_ms;
+}
+
+void granular_set_decay(GranularEngine *engine, float decay_ms) {
+    engine->decay_ms = decay_ms;
+}
+
+void granular_set_sustain(GranularEngine *engine, float sustain) {
+    engine->sustain = sustain;
+}
+
+void granular_set_release(GranularEngine *engine, float release_ms) {
+    engine->release_ms = release_ms;
 }
 
 void granular_note_on(GranularEngine *engine, int32_t key, float frequency) {
@@ -83,13 +107,13 @@ void granular_note_on(GranularEngine *engine, int32_t key, float frequency) {
     engine->voices[target_idx].key = key;
     engine->voices[target_idx].frequency = frequency;
     engine->voices[target_idx].spawn_timer = 0.0f;
+    engine->voices[target_idx].adsr_state = ADSR_ATTACK;
 }
 
 void granular_note_off(GranularEngine *engine, int32_t key) {
     for (int v = 0; v < MAX_VOICES; ++v) {
-        if (engine->voices[v].active && engine->voices[v].key == key) {
-            engine->voices[v].active = false;
-            engine->voices[v].key = -1;
+        if (engine->voices[v].active && engine->voices[v].key == key && engine->voices[v].adsr_state != ADSR_RELEASE) {
+            engine->voices[v].adsr_state = ADSR_RELEASE;
         }
     }
 }
@@ -99,6 +123,8 @@ void granular_reset(GranularEngine *engine) {
         engine->voices[v].active = false;
         engine->voices[v].key = -1;
         engine->voices[v].spawn_timer = 0.0f;
+        engine->voices[v].adsr_state = ADSR_IDLE;
+        engine->voices[v].adsr_value = 0.0f;
     }
     for (int i = 0; i < MAX_GRAINS; ++i) {
         engine->grains[i].active = false;
@@ -107,7 +133,7 @@ void granular_reset(GranularEngine *engine) {
     engine->next_voice_rr = 0;
 }
 
-static void spawn_grain(GranularEngine *engine, float frequency) {
+static void spawn_grain(GranularEngine *engine, float frequency, float amp) {
     for (int i = 0; i < MAX_GRAINS; ++i) {
         if (!engine->grains[i].active) {
             engine->grains[i].active = true;
@@ -123,23 +149,66 @@ static void spawn_grain(GranularEngine *engine, float frequency) {
             engine->grains[i].length = (float)engine->sample_rate * (engine->grain_size_ms / 1000.0f);
             engine->grains[i].progress = 0.0f;
             engine->grains[i].pan = (float)(rand() % 1000) / 1000.0f;
+            engine->grains[i].amp = amp;
             break;
         }
     }
 }
 
 void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) {
-    const float spawn_interval = (engine->sample_rate > 0.0 && engine->density > 0.0f) 
-                               ? ((float)engine->sample_rate / engine->density) 
-                               : 1000.0f;
+    const float sr = (engine->sample_rate > 0.0) ? (float)engine->sample_rate : 44100.0f;
+    const float spawn_interval = (engine->density > 0.0f) ? (sr / engine->density) : 1000.0f;
+
+    const float attack_step = 1.0f / (sr * (engine->attack_ms / 1000.0f));
+    const float decay_step = (1.0f - engine->sustain) / (sr * (engine->decay_ms / 1000.0f));
+    const float release_step = 1.0f / (sr * (engine->release_ms / 1000.0f));
 
     for (int v = 0; v < MAX_VOICES; ++v) {
         if (!engine->voices[v].active) continue;
 
-        engine->voices[v].spawn_timer += 1.0f;
-        if (engine->voices[v].spawn_timer >= spawn_interval) {
-            engine->voices[v].spawn_timer = 0.0f;
-            spawn_grain(engine, engine->voices[v].frequency);
+        Voice *voice = &engine->voices[v];
+
+        switch (voice->adsr_state) {
+            case ADSR_ATTACK:
+                voice->adsr_value += attack_step;
+                if (voice->adsr_value >= 1.0f) {
+                    voice->adsr_value = 1.0f;
+                    voice->adsr_state = ADSR_DECAY;
+                }
+                break;
+
+            case ADSR_DECAY:
+                voice->adsr_value -= decay_step;
+                if (voice->adsr_value <= engine->sustain) {
+                    voice->adsr_value = engine->sustain;
+                    voice->adsr_state = ADSR_SUSTAIN;
+                }
+                break;
+
+            case ADSR_SUSTAIN:
+                voice->adsr_value = engine->sustain;
+                break;
+
+            case ADSR_RELEASE:
+                voice->adsr_value -= release_step;
+                if (voice->adsr_value <= 0.0001f) {
+                    voice->adsr_value = 0.0f;
+                    voice->adsr_state = ADSR_IDLE;
+                    voice->active = false;
+                    voice->key = -1;
+                }
+                break;
+
+            default:
+                break;
+        }
+
+        if (voice->active && voice->adsr_value > 0.0f) {
+            voice->spawn_timer += 1.0f;
+            if (voice->spawn_timer >= spawn_interval) {
+                voice->spawn_timer = 0.0f;
+                spawn_grain(engine, voice->frequency, voice->adsr_value);
+            }
         }
     }
 
@@ -166,7 +235,7 @@ void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) 
         float frac = grain->pos - (float)idx_a;
         float audio_val = engine->sample_buffer[idx_a] * (1.0f - frac) + engine->sample_buffer[idx_b] * frac;
 
-        float grain_amp = audio_val * env * 0.045f;
+        float grain_amp = audio_val * env * grain->amp * 0.045f;
         mixed_l += grain_amp * (1.0f - grain->pan);
         mixed_r += grain_amp * grain->pan;
 
