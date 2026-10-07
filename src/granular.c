@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #define PI 3.14159265358979323846
-#define BASE_ROOT_FREQ 220.0f
+#define BASE_ROOT_FREQ 110.0f
 
 static void init_hann_lut(GranularEngine *engine) {
     for (int i = 0; i < HANN_LUT_SIZE; ++i) {
@@ -18,10 +18,10 @@ static void init_sample_buffers(GranularEngine *engine) {
     for (int i = 0; i < SAMPLE_BUFFER_SIZE; ++i) {
         float phase = 2.0f * (float)PI * num_cycles * ((float)i / (float)SAMPLE_BUFFER_SIZE);
 
-        engine->sample_buffers[0][i] = sinf(phase) * 0.75f;
+        engine->sample_buffers[0][i] = sinf(phase) * 0.70f + sinf(phase * 2.0f) * 0.15f;
 
         float tri = 0.0f;
-        for (int k = 0; k < 6; ++k) {
+        for (int k = 0; k < 8; ++k) {
             float n = 2.0f * (float)k + 1.0f;
             float sign = (k % 2 == 0) ? 1.0f : -1.0f;
             tri += (sign / (n * n)) * sinf(phase * n);
@@ -29,13 +29,13 @@ static void init_sample_buffers(GranularEngine *engine) {
         engine->sample_buffers[1][i] = tri * 0.70f;
 
         float saw = 0.0f;
-        for (int k = 1; k <= 14; ++k) {
+        for (int k = 1; k <= 20; ++k) {
             saw += (1.0f / (float)k) * sinf(phase * (float)k);
         }
         engine->sample_buffers[2][i] = saw * 0.45f;
 
         float sqr = 0.0f;
-        for (int k = 0; k < 7; ++k) {
+        for (int k = 0; k < 10; ++k) {
             float n = 2.0f * (float)k + 1.0f;
             sqr += (1.0f / n) * sinf(phase * n);
         }
@@ -53,6 +53,7 @@ void granular_init(GranularEngine *engine, double sample_rate) {
     engine->spray = 0.15f;
     engine->gain = 0.75f;
     engine->wave_morph = 0.0f;
+    engine->tone = 0.50f;
 
     engine->attack_ms = 20.0f;
     engine->decay_ms = 200.0f;
@@ -65,6 +66,11 @@ void granular_init(GranularEngine *engine, double sample_rate) {
     engine->held_sample_l = 0.0f;
     engine->held_sample_r = 0.0f;
     engine->pitch_bend_semitones = 0.0f;
+
+    engine->lp_l = 0.0f;
+    engine->lp_r = 0.0f;
+    engine->hp_l = 0.0f;
+    engine->hp_r = 0.0f;
 
     init_hann_lut(engine);
     init_sample_buffers(engine);
@@ -104,6 +110,12 @@ void granular_set_wave_morph(GranularEngine *engine, float morph) {
     if (morph < 0.0f) morph = 0.0f;
     if (morph > 3.0f) morph = 3.0f;
     engine->wave_morph = morph;
+}
+
+void granular_set_tone(GranularEngine *engine, float tone) {
+    if (tone < 0.0f) tone = 0.0f;
+    if (tone > 1.0f) tone = 1.0f;
+    engine->tone = tone;
 }
 
 void granular_set_attack(GranularEngine *engine, float attack_ms) {
@@ -178,6 +190,10 @@ void granular_reset(GranularEngine *engine) {
     engine->playhead = 0.0f;
     engine->next_voice_rr = 0;
     engine->pitch_bend_semitones = 0.0f;
+    engine->lp_l = 0.0f;
+    engine->lp_r = 0.0f;
+    engine->hp_l = 0.0f;
+    engine->hp_r = 0.0f;
 }
 
 static void spawn_grain(GranularEngine *engine, float frequency, float amp) {
@@ -335,6 +351,21 @@ void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) 
         out_raw_r = roundf(out_raw_r * levels) / levels;
     }
 
-    *out_l = out_raw_l;
-    *out_r = out_raw_r;
+    engine->lp_l += 0.025f * (out_raw_l - engine->lp_l);
+    engine->lp_r += 0.025f * (out_raw_r - engine->lp_r);
+
+    engine->hp_l += 0.50f * (out_raw_l - engine->hp_l);
+    engine->hp_r += 0.50f * (out_raw_r - engine->hp_r);
+    float high_l = out_raw_l - engine->hp_l;
+    float high_r = out_raw_r - engine->hp_r;
+
+    float bass_gain = engine->tone * 1.5f;
+    float air_gain = engine->tone * 1.7f;
+    float mid_cut = 1.0f - (engine->tone * 0.22f);
+
+    float sculpted_l = (out_raw_l * mid_cut) + (engine->lp_l * bass_gain) + (high_l * air_gain);
+    float sculpted_r = (out_raw_r * mid_cut) + (engine->lp_r * bass_gain) + (high_r * air_gain);
+
+    *out_l = tanhf(sculpted_l);
+    *out_r = tanhf(sculpted_r);
 }
