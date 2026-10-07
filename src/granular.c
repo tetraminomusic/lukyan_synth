@@ -11,20 +11,35 @@ static void init_hann_lut(GranularEngine *engine) {
     }
 }
 
-static void init_sample_buffer(GranularEngine *engine) {
+static void init_sample_buffers(GranularEngine *engine) {
     float sr = (engine->sample_rate > 0.0) ? (float)engine->sample_rate : 44100.0f;
-
     float num_cycles = roundf((float)SAMPLE_BUFFER_SIZE * BASE_ROOT_FREQ / sr);
 
     for (int i = 0; i < SAMPLE_BUFFER_SIZE; ++i) {
         float phase = 2.0f * (float)PI * num_cycles * ((float)i / (float)SAMPLE_BUFFER_SIZE);
-        
-        float wave = sinf(phase) * 0.55f
-                   + sinf(phase * 2.0f) * 0.30f
-                   + sinf(phase * 4.0f) * 0.12f
-                   + sinf(phase * 8.0f) * 0.03f;
 
-        engine->sample_buffer[i] = wave;
+        engine->sample_buffers[0][i] = sinf(phase) * 0.75f;
+
+        float tri = 0.0f;
+        for (int k = 0; k < 6; ++k) {
+            float n = 2.0f * (float)k + 1.0f;
+            float sign = (k % 2 == 0) ? 1.0f : -1.0f;
+            tri += (sign / (n * n)) * sinf(phase * n);
+        }
+        engine->sample_buffers[1][i] = tri * 0.70f;
+
+        float saw = 0.0f;
+        for (int k = 1; k <= 14; ++k) {
+            saw += (1.0f / (float)k) * sinf(phase * (float)k);
+        }
+        engine->sample_buffers[2][i] = saw * 0.45f;
+
+        float sqr = 0.0f;
+        for (int k = 0; k < 7; ++k) {
+            float n = 2.0f * (float)k + 1.0f;
+            sqr += (1.0f / n) * sinf(phase * n);
+        }
+        engine->sample_buffers[3][i] = sqr * 0.50f;
     }
 }
 
@@ -37,6 +52,7 @@ void granular_init(GranularEngine *engine, double sample_rate) {
     engine->density = 30.0f;
     engine->spray = 0.15f;
     engine->gain = 0.75f;
+    engine->wave_morph = 0.0f;
 
     engine->attack_ms = 20.0f;
     engine->decay_ms = 200.0f;
@@ -51,7 +67,7 @@ void granular_init(GranularEngine *engine, double sample_rate) {
     engine->pitch_bend_semitones = 0.0f;
 
     init_hann_lut(engine);
-    init_sample_buffer(engine);
+    init_sample_buffers(engine);
 
     for (int i = 0; i < MAX_GRAINS; ++i) {
         engine->grains[i].active = false;
@@ -82,6 +98,12 @@ void granular_set_spray(GranularEngine *engine, float spray) {
 
 void granular_set_gain(GranularEngine *engine, float gain) {
     engine->gain = gain;
+}
+
+void granular_set_wave_morph(GranularEngine *engine, float morph) {
+    if (morph < 0.0f) morph = 0.0f;
+    if (morph > 3.0f) morph = 3.0f;
+    engine->wave_morph = morph;
 }
 
 void granular_set_attack(GranularEngine *engine, float attack_ms) {
@@ -247,6 +269,19 @@ void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) 
     float mixed_l = 0.0f;
     float mixed_r = 0.0f;
 
+    int t0 = (int)engine->wave_morph;
+    if (t0 > 2) t0 = 2;
+    int t1 = t0 + 1;
+    float morph_frac = engine->wave_morph - (float)t0;
+    if (engine->wave_morph >= 3.0f) {
+        t0 = 3;
+        t1 = 3;
+        morph_frac = 0.0f;
+    }
+
+    const float *buf0 = engine->sample_buffers[t0];
+    const float *buf1 = engine->sample_buffers[t1];
+
     for (int g = 0; g < MAX_GRAINS; ++g) {
         if (!engine->grains[g].active) continue;
 
@@ -260,7 +295,10 @@ void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) 
         int idx_a = (int)grain->pos;
         int idx_b = (idx_a + 1) % SAMPLE_BUFFER_SIZE;
         float frac = grain->pos - (float)idx_a;
-        float audio_val = engine->sample_buffer[idx_a] * (1.0f - frac) + engine->sample_buffer[idx_b] * frac;
+
+        float val0 = buf0[idx_a] * (1.0f - frac) + buf0[idx_b] * frac;
+        float val1 = buf1[idx_a] * (1.0f - frac) + buf1[idx_b] * frac;
+        float audio_val = val0 * (1.0f - morph_frac) + val1 * morph_frac;
 
         float grain_amp = audio_val * env * grain->amp * 0.045f;
         mixed_l += grain_amp * (1.0f - grain->pan);

@@ -8,6 +8,7 @@
 #define MAX_GRAINS 256
 #define HANN_LUT_SIZE 2048
 #define SAMPLE_BUFFER_SIZE 96000
+#define NUM_WAVEFORMS 4
 
 typedef enum {
     ADSR_IDLE = 0,
@@ -45,6 +46,7 @@ typedef struct {
     float density;
     float spray;
     float gain;
+    float wave_morph;
 
     float attack_ms;
     float decay_ms;
@@ -58,7 +60,7 @@ typedef struct {
     float held_sample_r;
     float pitch_bend_semitones;
 
-    float sample_buffer[SAMPLE_BUFFER_SIZE];
+    float sample_buffers[NUM_WAVEFORMS][SAMPLE_BUFFER_SIZE];
     float hann_lut[HANN_LUT_SIZE];
     Grain grains[MAX_GRAINS];
     Voice voices[MAX_VOICES];
@@ -72,6 +74,7 @@ void granular_set_grain_size(GranularEngine *engine, float size_ms);
 void granular_set_density(GranularEngine *engine, float density);
 void granular_set_spray(GranularEngine *engine, float spray);
 void granular_set_gain(GranularEngine *engine, float gain);
+void granular_set_wave_morph(GranularEngine *engine, float morph);
 void granular_set_attack(GranularEngine *engine, float attack_ms);
 void granular_set_decay(GranularEngine *engine, float decay_ms);
 void granular_set_sustain(GranularEngine *engine, float sustain);
