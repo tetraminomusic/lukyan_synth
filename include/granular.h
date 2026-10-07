@@ -74,6 +74,6 @@ void granular_set_release(GranularEngine *engine, float release_ms);
 void granular_set_crush(GranularEngine *engine, float bits);
 void granular_set_downsample(GranularEngine *engine, float factor);
 void granular_set_pitch_bend(GranularEngine *engine, float semitones);
-void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r);
+void granular_render_block(GranularEngine *engine, float *out_l, float *out_r, uint32_t frames);
 
 #endif

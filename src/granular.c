@@ -224,3 +224,15 @@ void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) 
     *out_l = mixed_l;
     *out_r = mixed_r;
 }
+
+void granular_render_block(GranularEngine *engine, float *out_l, float *out_r, uint32_t frames) {
+    for (uint32_t i = 0; i < frames; ++i) {
+        float sample_l = 0.0f;
+        float sample_r = 0.0f;
+
+        granular_render_sample(engine, &sample_l, &sample_r);
+
+        if (out_l) out_l[i] = sample_l;
+        if (out_r) out_r[i] = sample_r;
+    }
+}
