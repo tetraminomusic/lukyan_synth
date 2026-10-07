@@ -153,8 +153,8 @@ void gui_render_frame(GranularSynth *synth) {
     draw_copy_bg(synth->gui.pixels, synth->gui.bg_pixels, FB_WIDTH * FB_HEIGHT);
 
     draw_rect_panel(synth->gui.pixels, 0, 0, GUI_WIDTH, 50, 0xD0181A1F, 0xFF282C34);
-    draw_text(synth->gui.pixels, 20, 20, "LUKYAN SYNTH  //  POLYPHONIC GRANULAR", 0xFFE5C07B);
-    draw_text(synth->gui.pixels, 340, 20, "by tetramino", 0xFF5C6370);
+    draw_text(synth->gui.pixels, 20, 20, "Лукьянчик синт  //  ЛЕГЕНДАРНЫЙ ШЛЯГЕРНЫЙ СИНТ", 0xFFE5C07B);
+    draw_text(synth->gui.pixels, 340, 20, "от тетраминыча", 0xFF5C6370);
 
     draw_button(synth->gui.pixels, 520, 12, 125, 28, "1. OSC & CORE", synth->gui.current_tab == TAB_OSC);
     draw_button(synth->gui.pixels, 655, 12, 125, 28, "2. FX RACK", synth->gui.current_tab == TAB_FX);
