@@ -9,6 +9,12 @@ typedef struct {
     float gain;
     float cutoff_hz;
     float resonance;
+    
+    float phaser_mix;
+    float phaser_rate_hz;
+    float phaser_depth;
+    float phaser_feedback;
+
     float chorus_mix;
     float chorus_rate_hz;
     float chorus_depth_ms;
@@ -19,15 +25,17 @@ typedef struct {
     float held_sample_l;
     float held_sample_r;
 
-    // State Variable Filter
     float ic1eq_l, ic2eq_l;
     float ic1eq_r, ic2eq_r;
 
-    // Chorus
+    float phaser_lfo_phase;
+    float phaser_x_l[4], phaser_y_l[4];
+    float phaser_x_r[4], phaser_y_r[4];
+
     float chorus_buf_l[CHORUS_BUFFER_SIZE];
     float chorus_buf_r[CHORUS_BUFFER_SIZE];
     int write_pos;
-    float lfo_phase;
+    float chorus_lfo_phase;
 } FxState;
 
 void fx_state_init(FxState *state);

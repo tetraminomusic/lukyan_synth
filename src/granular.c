@@ -41,6 +41,10 @@ void granular_init(GranularEngine *engine, double sample_rate) {
     engine->fx_params.gain = 0.75f;
     engine->fx_params.cutoff_hz = 20000.0f;
     engine->fx_params.resonance = 0.707f;
+    engine->fx_params.phaser_mix = 0.0f;
+    engine->fx_params.phaser_rate_hz = 0.5f;
+    engine->fx_params.phaser_depth = 0.8f;
+    engine->fx_params.phaser_feedback = 0.5f;
     engine->fx_params.chorus_mix = 0.0f;
     engine->fx_params.chorus_rate_hz = 1.2f;
     engine->fx_params.chorus_depth_ms = 5.0f;
