@@ -26,48 +26,48 @@ typedef struct {
 } KnobLayout;
 
 static const KnobLayout KNOBS_OSC[] = {
-    { PARAM_OSC1_GAIN, 75, 160, 24, "Получить", "Gain" },
-    { PARAM_OSC1_SEMI, 160, 160, 24, "Половина", "Semi" },
-    { PARAM_OSC1_MORPH, 245, 160, 24, "Форма", "Morph" },
+    { PARAM_OSC1_GAIN, 65, 140, 20, "Получить", "Gain" },
+    { PARAM_OSC1_SEMI, 137, 140, 20, "Половина", "Semi" },
+    { PARAM_OSC1_MORPH, 210, 140, 20, "Форма", "Morph" },
     
-    { PARAM_OSC2_GAIN, 385, 160, 24, "Получить", "Gain" },
-    { PARAM_OSC2_SEMI, 470, 160, 24, "Половина", "Semi" },
-    { PARAM_OSC2_MORPH, 555, 160, 24, "Форма", "Morph" },
+    { PARAM_OSC2_GAIN, 325, 140, 20, "Получить", "Gain" },
+    { PARAM_OSC2_SEMI, 397, 140, 20, "Половина", "Semi" },
+    { PARAM_OSC2_MORPH, 470, 140, 20, "Форма", "Morph" },
     
-    { PARAM_OSC3_GAIN, 700, 160, 24, "Получить", "Gain" },
-    { PARAM_OSC3_SEMI, 785, 160, 24, "Половина", "Semi" },
-    { PARAM_OSC3_MORPH, 870, 160, 24, "Форма", "Morph" },
+    { PARAM_OSC3_GAIN, 585, 140, 20, "Получить", "Gain" },
+    { PARAM_OSC3_SEMI, 660, 140, 20, "Половина", "Semi" },
+    { PARAM_OSC3_MORPH, 735, 140, 20, "Форма", "Morph" },
     
-    { PARAM_GRAIN_SIZE, 95, 435, 26, "Размер", "Size" },
-    { PARAM_DENSITY, 240, 435, 26, "Плотность", "Density" },
-    { PARAM_SPRAY, 385, 435, 26, "Спрей", "Spray" },
+    { PARAM_GRAIN_SIZE, 80, 385, 22, "Размер", "Size" },
+    { PARAM_DENSITY, 200, 385, 22, "Плотность", "Density" },
+    { PARAM_SPRAY, 320, 385, 22, "Спрей", "Spray" },
     
-    { PARAM_ATTACK, 545, 425, 22, "Нападение", "Attack" },
-    { PARAM_DECAY, 630, 425, 22, "Спад", "Decay" },
-    { PARAM_SUSTAIN, 715, 425, 22, "Сустейн", "Sustain" },
-    { PARAM_RELEASE, 800, 425, 22, "Выпуск", "Release" },
-    { PARAM_GAIN, 885, 425, 22, "Господин", "Master" }
+    { PARAM_ATTACK, 456, 370, 18, "Нападение", "Attack" },
+    { PARAM_DECAY, 527, 370, 18, "Спад", "Decay" },
+    { PARAM_SUSTAIN, 598, 370, 18, "Сустейн", "Sustain" },
+    { PARAM_RELEASE, 669, 370, 18, "Выпуск", "Release" },
+    { PARAM_GAIN, 740, 370, 18, "Господин", "Master" }
 };
 
 static const KnobLayout KNOBS_FX[] = {
-    { PARAM_CUTOFF, 95, 165, 26, "Обрезание", "Cutoff" },
-    { PARAM_RESONANCE, 225, 165, 26, "Резонансик", "Res" },
+    { PARAM_CUTOFF, 80, 145, 22, "Обрезание", "Cutoff" },
+    { PARAM_RESONANCE, 190, 145, 22, "Резонансик", "Res" },
     
-    { PARAM_CRUSH, 405, 165, 26, "Биты", "Bits" },
-    { PARAM_DOWNSAMPLE, 535, 165, 26, "Частота", "Rate" },
+    { PARAM_CRUSH, 340, 145, 22, "Биты", "Bits" },
+    { PARAM_DOWNSAMPLE, 450, 145, 22, "Частота", "Rate" },
     
-    { PARAM_PHASER_MIX, 685, 160, 21, "Смесь", "Mix" },
-    { PARAM_PHASER_RATE, 755, 160, 21, "Частота", "Rate" },
-    { PARAM_PHASER_DEPTH, 825, 160, 21, "Дно", "Depth" },
-    { PARAM_PHASER_FEEDBACK, 895, 160, 21, "Fbk", "Fbk" },
+    { PARAM_PHASER_MIX, 568, 135, 17, "Смесь", "Mix" },
+    { PARAM_PHASER_RATE, 626, 135, 17, "Частота", "Rate" },
+    { PARAM_PHASER_DEPTH, 684, 135, 17, "Дно", "Depth" },
+    { PARAM_PHASER_FEEDBACK, 742, 135, 17, "Fbk", "Fbk" },
     
-    { PARAM_CHORUS_MIX, 95, 435, 26, "Смесь", "Mix" },
-    { PARAM_CHORUS_RATE, 240, 435, 26, "Частота", "Rate" },
-    { PARAM_CHORUS_DEPTH, 385, 435, 26, "Дно", "Depth" },
+    { PARAM_CHORUS_MIX, 80, 370, 22, "Смесь", "Mix" },
+    { PARAM_CHORUS_RATE, 195, 370, 22, "Частота", "Rate" },
+    { PARAM_CHORUS_DEPTH, 310, 370, 22, "Дно", "Depth" },
     
-    { PARAM_REVERB_MIX, 570, 435, 26, "Смесь", "Mix" },
-    { PARAM_REVERB_SIZE, 715, 435, 26, "Размер", "Size" },
-    { PARAM_REVERB_DAMP, 860, 435, 26, "Сырость", "Damp" }
+    { PARAM_REVERB_MIX, 480, 370, 22, "Смесь", "Mix" },
+    { PARAM_REVERB_SIZE, 595, 370, 22, "Размер", "Size" },
+    { PARAM_REVERB_DAMP, 710, 370, 22, "Сырость", "Damp" }
 };
 
 void gui_init(GuiState *gui) {
@@ -82,32 +82,18 @@ void gui_init(GuiState *gui) {
     unsigned char *data = stbi_load_from_memory(photo_png, photo_png_len, &img_w, &img_h, &channels, 4);
     (void)channels;
 
-    // Высококачественная билинейная интерполяция фото
-    if (data && img_w > 1 && img_h > 1) {
+    if (data && img_w > 0 && img_h > 0) {
         for (int y = 0; y < FB_HEIGHT; ++y) {
-            float v = ((float)y / (float)FB_HEIGHT) * (float)(img_h - 1);
-            int y0 = (int)v;
-            int y1 = (y0 < img_h - 1) ? y0 + 1 : y0;
-            float fy = v - (float)y0;
-
             for (int x = 0; x < FB_WIDTH; ++x) {
-                float u = ((float)x / (float)FB_WIDTH) * (float)(img_w - 1);
-                int x0 = (int)u;
-                int x1 = (x0 < img_w - 1) ? x0 + 1 : x0;
-                float fx = u - (float)x0;
+                int src_x = (x * img_w) / FB_WIDTH;
+                int src_y = (y * img_h) / FB_HEIGHT;
+                int idx = (src_y * img_w + src_x) * 4;
 
-                int i00 = (y0 * img_w + x0) * 4;
-                int i10 = (y0 * img_w + x1) * 4;
-                int i01 = (y1 * img_w + x0) * 4;
-                int i11 = (y1 * img_w + x1) * 4;
+                uint8_t r = (uint8_t)(data[idx] * 0.45f);
+                uint8_t g = (uint8_t)(data[idx + 1] * 0.45f);
+                uint8_t b = (uint8_t)(data[idx + 2] * 0.45f);
 
-                float r = (data[i00] * (1.0f - fx) + data[i10] * fx) * (1.0f - fy) + (data[i01] * (1.0f - fx) + data[i11] * fx) * fy;
-                float g = (data[i00 + 1] * (1.0f - fx) + data[i10 + 1] * fx) * (1.0f - fy) + (data[i01 + 1] * (1.0f - fx) + data[i11 + 1] * fx) * fy;
-                float b = (data[i00 + 2] * (1.0f - fx) + data[i10 + 2] * fx) * (1.0f - fy) + (data[i01 + 2] * (1.0f - fx) + data[i11 + 2] * fx) * fy;
-
-                r *= 0.45f; g *= 0.45f; b *= 0.45f;
-
-                gui->bg_pixels[y * FB_WIDTH + x] = (0xFF << 24) | ((uint8_t)r << 16) | ((uint8_t)g << 8) | (uint8_t)b;
+                gui->bg_pixels[y * FB_WIDTH + x] = (0xFF << 24) | (r << 16) | (g << 8) | b;
             }
         }
         stbi_image_free(data);
@@ -122,20 +108,20 @@ static void draw_tab_osc(GranularSynth *synth) {
     uint32_t *px = synth->gui.pixels;
     bool is_ru = (synth->gui.current_lang == LANG_MEME_RU);
 
-    draw_rect_panel(px, 20, 70, 295, 250, 0xB0181A1F, 0xFF3E4451);
-    draw_text(px, 35, 85, is_ru ? "Генератор 1" : "OSCILLATOR 1", 0xFF61AFEF);
+    draw_rect_panel(px, 15, 60, 245, 230, 0xA01E222A, 0xFF3E4451);
+    draw_text(px, 25, 70, is_ru ? "Генератор 1" : "OSCILLATOR 1", 0xFF61AFEF);
 
-    draw_rect_panel(px, 330, 70, 295, 250, 0xB0181A1F, 0xFF3E4451);
-    draw_text(px, 345, 85, is_ru ? "Генератор 2" : "OSCILLATOR 2", 0xFF98C379);
+    draw_rect_panel(px, 275, 60, 245, 230, 0xA01E222A, 0xFF3E4451);
+    draw_text(px, 285, 70, is_ru ? "Генератор 2" : "OSCILLATOR 2", 0xFF98C379);
 
-    draw_rect_panel(px, 645, 70, 295, 250, 0xB0181A1F, 0xFF3E4451);
-    draw_text(px, 660, 85, is_ru ? "Генератор 3" : "OSCILLATOR 3", 0xFFE5C07B);
+    draw_rect_panel(px, 535, 60, 250, 230, 0xA01E222A, 0xFF3E4451);
+    draw_text(px, 545, 70, is_ru ? "Генератор 3" : "OSCILLATOR 3", 0xFFE5C07B);
 
-    draw_rect_panel(px, 20, 340, 455, 240, 0xB0181A1F, 0xFF3E4451);
-    draw_text(px, 35, 355, is_ru ? "Зерно облако" : "GRANULAR CLOUD", 0xFFC678DD);
+    draw_rect_panel(px, 15, 305, 380, 180, 0xA01E222A, 0xFF3E4451);
+    draw_text(px, 25, 315, is_ru ? "Зерно облако" : "GRANULAR CLOUD", 0xFFC678DD);
 
-    draw_rect_panel(px, 490, 340, 450, 240, 0xB0181A1F, 0xFF3E4451);
-    draw_text(px, 505, 355, is_ru ? "КОНВЕРТ И ГОСПОДИН" : "ADSR & MASTER", 0xFFE06C75);
+    draw_rect_panel(px, 410, 305, 375, 180, 0xA01E222A, 0xFF3E4451);
+    draw_text(px, 420, 315, is_ru ? "КОНВЕРТ И ГОСПОДИН" : "ADSR & MASTER", 0xFFE06C75);
 
     for (size_t i = 0; i < sizeof(KNOBS_OSC) / sizeof(KNOBS_OSC[0]); ++i) {
         int id = KNOBS_OSC[i].id;
@@ -158,20 +144,20 @@ static void draw_tab_fx(GranularSynth *synth) {
     uint32_t *px = synth->gui.pixels;
     bool is_ru = (synth->gui.current_lang == LANG_MEME_RU);
 
-    draw_rect_panel(px, 20, 70, 295, 240, 0xB0181A1F, 0xFF3E4451);
-    draw_text(px, 35, 85, is_ru ? "ВЕРХНИЙ ПРОПУСК ФИЛЬТРОВАННОЕ" : "FILTER (SVF)", 0xFF61AFEF);
+    draw_rect_panel(px, 15, 60, 245, 200, 0xA01E222A, 0xFF3E4451);
+    draw_text(px, 25, 70, is_ru ? "ВЕРХНИЙ ПРОПУСК ФИЛЬТРОВАННОЕ" : "FILTER (SVF)", 0xFF61AFEF);
 
-    draw_rect_panel(px, 330, 70, 295, 240, 0xB0181A1F, 0xFF3E4451);
-    draw_text(px, 345, 85, is_ru ? "НИЗКОЕ КАЧЕСТВО БИТКРАШЕР КРАНЧ" : "LO-FI CRUNCH", 0xFFE06C75);
+    draw_rect_panel(px, 275, 60, 245, 200, 0xA01E222A, 0xFF3E4451);
+    draw_text(px, 285, 70, is_ru ? "НИЗКОЕ КАЧЕСТВО БИТКРАШЕР КРАНЧ" : "LO-FI CRUNCH", 0xFFE06C75);
 
-    draw_rect_panel(px, 645, 70, 295, 240, 0xB0181A1F, 0xFF3E4451);
-    draw_text(px, 660, 85, is_ru ? "ФАЗЕР МАЗЕР" : "PHASER (4-STAGE)", 0xFFE5C07B);
+    draw_rect_panel(px, 535, 60, 250, 200, 0xA01E222A, 0xFF3E4451);
+    draw_text(px, 545, 70, is_ru ? "ФАЗЕР МАЗЕР" : "PHASER (4-STAGE)", 0xFFE5C07B);
 
-    draw_rect_panel(px, 20, 330, 455, 250, 0xB0181A1F, 0xFF3E4451);
-    draw_text(px, 35, 345, is_ru ? "ДВА-ПРИПЕВ" : "STEREO CHORUS", 0xFF98C379);
+    draw_rect_panel(px, 15, 280, 380, 205, 0xA01E222A, 0xFF3E4451);
+    draw_text(px, 25, 290, is_ru ? "ДВА-ПРИПЕВ" : "STEREO CHORUS", 0xFF98C379);
 
-    draw_rect_panel(px, 490, 330, 450, 250, 0xB0181A1F, 0xFF3E4451);
-    draw_text(px, 505, 345, is_ru ? "РЕВЁРБЧИК" : "SCHROEDER REVERB", 0xFFC678DD);
+    draw_rect_panel(px, 410, 280, 375, 205, 0xA01E222A, 0xFF3E4451);
+    draw_text(px, 420, 290, is_ru ? "РЕВЁРБЧИК" : "SCHROEDER REVERB", 0xFFC678DD);
 
     for (size_t i = 0; i < sizeof(KNOBS_FX) / sizeof(KNOBS_FX[0]); ++i) {
         int id = KNOBS_FX[i].id;
@@ -195,20 +181,20 @@ void gui_render_frame(GranularSynth *synth) {
 
     draw_copy_bg(synth->gui.pixels, synth->gui.bg_pixels, FB_WIDTH * FB_HEIGHT);
 
-    draw_rect_panel(synth->gui.pixels, 0, 0, GUI_WIDTH, 55, 0xE0181A1F, 0xFF282C34);
+    draw_rect_panel(synth->gui.pixels, 0, 0, GUI_WIDTH, 50, 0xD0181A1F, 0xFF282C34);
 
     bool is_ru = (synth->gui.current_lang == LANG_MEME_RU);
     if (is_ru) {
-        draw_text(synth->gui.pixels, 20, 22, "ЛУКЬЯНЧИК СИНТ", 0xFFE5C07B);
-        draw_text(synth->gui.pixels, 130, 22, "// ЛЕГЕНДАРНЫЙ ШЛЯГЕРНЫЙ СИНТ", 0xFF5C6370);
+        draw_text(synth->gui.pixels, 15, 20, "ЛУКЬЯНЧИК СИНТ", 0xFFE5C07B);
+        draw_text(synth->gui.pixels, 120, 20, "// ЛЕГЕНДАРНЫЙ ШЛЯГЕРНЫЙ СИНТ", 0xFF5C6370);
     } else {
-        draw_text(synth->gui.pixels, 20, 22, "LUKYAN SYNTH", 0xFFE5C07B);
-        draw_text(synth->gui.pixels, 120, 22, "// GRANULAR POLYPHONIC SYNTH", 0xFF5C6370);
+        draw_text(synth->gui.pixels, 15, 20, "LUKYAN SYNTH", 0xFFE5C07B);
+        draw_text(synth->gui.pixels, 110, 20, "// GRANULAR POLYPHONIC SYNTH", 0xFF5C6370);
     }
 
-    draw_button(synth->gui.pixels, 470, 14, 100, 30, is_ru ? "Пацанский" : "ENG", true);
-    draw_button(synth->gui.pixels, 585, 14, 170, 30, is_ru ? "Генераторы" : "1. OSC & CORE", synth->gui.current_tab == TAB_OSC);
-    draw_button(synth->gui.pixels, 770, 14, 170, 30, is_ru ? "Спецэффекты" : "2. FX RACK", synth->gui.current_tab == TAB_FX);
+    draw_button(synth->gui.pixels, 370, 12, 85, 28, is_ru ? "Пацанский" : "ENG", true);
+    draw_button(synth->gui.pixels, 470, 12, 145, 28, is_ru ? "Генераторы" : "1. OSC & CORE", synth->gui.current_tab == TAB_OSC);
+    draw_button(synth->gui.pixels, 630, 12, 155, 28, is_ru ? "Спецэффекты" : "2. FX RACK", synth->gui.current_tab == TAB_FX);
 
     if (synth->gui.current_tab == TAB_OSC) {
         draw_tab_osc(synth);
@@ -243,18 +229,18 @@ void gui_render_frame(GranularSynth *synth) {
 }
 
 void gui_handle_mouse_down(GranularSynth *synth, float mx, float my) {
-    if (my >= 14 && my <= 44) {
-        if (mx >= 470 && mx <= 570) {
+    if (my >= 12 && my <= 40) {
+        if (mx >= 370 && mx <= 455) {
             synth->gui.current_lang = (synth->gui.current_lang == LANG_MEME_RU) ? LANG_EN : LANG_MEME_RU;
             gui_render_frame(synth);
             return;
         }
-        if (mx >= 585 && mx <= 755) {
+        if (mx >= 470 && mx <= 615) {
             synth->gui.current_tab = TAB_OSC;
             gui_render_frame(synth);
             return;
         }
-        if (mx >= 770 && mx <= 940) {
+        if (mx >= 630 && mx <= 785) {
             synth->gui.current_tab = TAB_FX;
             gui_render_frame(synth);
             return;
@@ -300,7 +286,7 @@ void gui_handle_mouse_drag(GranularSynth *synth, float mx, float my) {
 
     float delta_y = synth->gui.drag_start_y - my;
     double range = info.max_value - info.min_value;
-    double new_val = synth->gui.drag_start_val + (double)delta_y * (range / 180.0);
+    double new_val = synth->gui.drag_start_val + (double)delta_y * (range / 150.0);
 
     if (new_val < info.min_value) new_val = info.min_value;
     if (new_val > info.max_value) new_val = info.max_value;
@@ -368,6 +354,7 @@ static LRESULT CALLBACK win32_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
                 RECT rc;
                 GetClientRect(hwnd, &rc);
                 
+                // Включаем сглаживание и субпиксельную интерполяцию GDI
                 SetStretchBltMode(hdc, HALFTONE);
                 SetBrushOrgEx(hdc, 0, 0, NULL);
 
