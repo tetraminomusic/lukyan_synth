@@ -45,20 +45,25 @@ void draw_copy_bg(uint32_t *dst, const uint32_t *src, int count) {
 }
 
 void draw_rect_panel(uint32_t *pixels, int x, int y, int w, int h, uint32_t bg_color, uint32_t border_color) {
+    x *= GUI_SCALE;
+    y *= GUI_SCALE;
+    w *= GUI_SCALE;
+    h *= GUI_SCALE;
+
     uint8_t a = (bg_color >> 24) & 0xFF;
     uint8_t r = (bg_color >> 16) & 0xFF;
     uint8_t g = (bg_color >> 8) & 0xFF;
     uint8_t b = bg_color & 0xFF;
 
     for (int py = y; py < y + h; ++py) {
-        if (py < 0 || py >= GUI_HEIGHT) continue;
+        if (py < 0 || py >= FB_HEIGHT) continue;
         for (int px = x; px < x + w; ++px) {
-            if (px < 0 || px >= GUI_WIDTH) continue;
+            if (px < 0 || px >= FB_WIDTH) continue;
 
-            if (px == x || px == x + w - 1 || py == y || py == y + h - 1) {
-                pixels[py * GUI_WIDTH + px] = border_color;
+            if (px < x + 2 || px >= x + w - 2 || py < y + 2 || py >= y + h - 2) {
+                pixels[py * FB_WIDTH + px] = border_color;
             } else {
-                uint32_t bg = pixels[py * GUI_WIDTH + px];
+                uint32_t bg = pixels[py * FB_WIDTH + px];
                 uint8_t bg_r = (bg >> 16) & 0xFF;
                 uint8_t bg_g = (bg >> 8) & 0xFF;
                 uint8_t bg_b = bg & 0xFF;
@@ -67,7 +72,7 @@ void draw_rect_panel(uint32_t *pixels, int x, int y, int w, int h, uint32_t bg_c
                 uint8_t out_g = (g * a + bg_g * (255 - a)) / 255;
                 uint8_t out_b = (b * a + bg_b * (255 - a)) / 255;
 
-                pixels[py * GUI_WIDTH + px] = (0xFF << 24) | (out_r << 16) | (out_g << 8) | out_b;
+                pixels[py * FB_WIDTH + px] = (0xFF << 24) | (out_r << 16) | (out_g << 8) | out_b;
             }
         }
     }
@@ -75,7 +80,8 @@ void draw_rect_panel(uint32_t *pixels, int x, int y, int w, int h, uint32_t bg_c
 
 void draw_text(uint32_t *pixels, int x, int y, const char *str, uint32_t color) {
     if (!str) return;
-    int cur_x = x;
+    int cur_x = x * GUI_SCALE;
+    int base_y = y * GUI_SCALE;
 
     while (*str) {
         char c = *str++;
@@ -86,15 +92,19 @@ void draw_text(uint32_t *pixels, int x, int y, const char *str, uint32_t color) 
             uint8_t line = FONT_5X7[idx][col];
             for (int row = 0; row < 7; ++row) {
                 if (line & (1 << row)) {
-                    int px = cur_x + col;
-                    int py = y + row;
-                    if (px >= 0 && px < GUI_WIDTH && py >= 0 && py < GUI_HEIGHT) {
-                        pixels[py * GUI_WIDTH + px] = color;
+                    for (int dy = 0; dy < GUI_SCALE; ++dy) {
+                        for (int dx = 0; dx < GUI_SCALE; ++dx) {
+                            int px = cur_x + col * GUI_SCALE + dx;
+                            int py = base_y + row * GUI_SCALE + dy;
+                            if (px >= 0 && px < FB_WIDTH && py >= 0 && py < FB_HEIGHT) {
+                                pixels[py * FB_WIDTH + px] = color;
+                            }
+                        }
                     }
                 }
             }
         }
-        cur_x += 6;
+        cur_x += 6 * GUI_SCALE;
     }
 }
 
@@ -115,37 +125,49 @@ void draw_knob(uint32_t *pixels, int cx, int cy, int radius, float norm_val, con
     if (norm_val < 0.0f) norm_val = 0.0f;
     if (norm_val > 1.0f) norm_val = 1.0f;
 
+    int r_px = radius * GUI_SCALE;
+    int cx_px = cx * GUI_SCALE;
+    int cy_px = cy * GUI_SCALE;
+
     uint32_t ring_color = is_active ? 0xFF61AFEF : 0xFF5C6370;
     uint32_t fill_color = 0xFF21252B;
 
-    for (int dy = -radius; dy <= radius; ++dy) {
-        int py = cy + dy;
-        if (py < 0 || py >= GUI_HEIGHT) continue;
-        for (int dx = -radius; dx <= radius; ++dx) {
-            int px = cx + dx;
-            if (px < 0 || px >= GUI_WIDTH) continue;
+    for (int dy = -r_px; dy <= r_px; ++dy) {
+        int py = cy_px + dy;
+        if (py < 0 || py >= FB_HEIGHT) continue;
+        for (int dx = -r_px; dx <= r_px; ++dx) {
+            int px = cx_px + dx;
+            if (px < 0 || px >= FB_WIDTH) continue;
 
             int dist_sq = dx * dx + dy * dy;
-            if (dist_sq <= radius * radius) {
-                if (dist_sq >= (radius - 2) * (radius - 2)) {
-                    pixels[py * GUI_WIDTH + px] = ring_color;
+            if (dist_sq <= r_px * r_px) {
+                if (dist_sq >= (r_px - 4) * (r_px - 4)) {
+                    pixels[py * FB_WIDTH + px] = ring_color;
                 } else {
-                    pixels[py * GUI_WIDTH + px] = fill_color;
+                    pixels[py * FB_WIDTH + px] = fill_color;
                 }
             }
         }
     }
 
     float angle = (-135.0f + norm_val * 270.0f) * ((float)PI / 180.0f);
-    int pointer_len = radius - 3;
-    int end_x = cx + (int)(sinf(angle) * (float)pointer_len);
-    int end_y = cy - (int)(cosf(angle) * (float)pointer_len);
+    int pointer_len = r_px - 6;
+    int end_x = cx_px + (int)(sinf(angle) * (float)pointer_len);
+    int end_y = cy_px - (int)(cosf(angle) * (float)pointer_len);
 
-    for (float t = 0.0f; t <= 1.0f; t += 0.1f) {
-        int lx = cx + (int)((float)(end_x - cx) * t);
-        int ly = cy + (int)((float)(end_y - cy) * t);
-        if (lx >= 0 && lx < GUI_WIDTH && ly >= 0 && ly < GUI_HEIGHT) {
-            pixels[ly * GUI_WIDTH + lx] = is_active ? 0xFF98C379 : 0xFFE5C07B;
+    uint32_t needle_color = is_active ? 0xFF98C379 : 0xFFE5C07B;
+
+    for (float t = 0.0f; t <= 1.0f; t += 0.05f) {
+        int lx = cx_px + (int)((float)(end_x - cx_px) * t);
+        int ly = cy_px + (int)((float)(end_y - cy_px) * t);
+        for (int ox = -1; ox <= 1; ++ox) {
+            for (int oy = -1; oy <= 1; ++oy) {
+                int px = lx + ox;
+                int py = ly + oy;
+                if (px >= 0 && px < FB_WIDTH && py >= 0 && py < FB_HEIGHT) {
+                    pixels[py * FB_WIDTH + px] = needle_color;
+                }
+            }
         }
     }
 

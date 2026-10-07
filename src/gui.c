@@ -35,22 +35,22 @@ void gui_init(GuiState *gui) {
     (void)channels;
 
     if (data && img_w > 0 && img_h > 0) {
-        for (int y = 0; y < GUI_HEIGHT; ++y) {
-            for (int x = 0; x < GUI_WIDTH; ++x) {
-                int src_x = (x * img_w) / GUI_WIDTH;
-                int src_y = (y * img_h) / GUI_HEIGHT;
+        for (int y = 0; y < FB_HEIGHT; ++y) {
+            for (int x = 0; x < FB_WIDTH; ++x) {
+                int src_x = (x * img_w) / FB_WIDTH;
+                int src_y = (y * img_h) / FB_HEIGHT;
                 int idx = (src_y * img_w + src_x) * 4;
 
-                uint8_t r = (uint8_t)(data[idx] * 0.40f);
-                uint8_t g = (uint8_t)(data[idx + 1] * 0.40f);
-                uint8_t b = (uint8_t)(data[idx + 2] * 0.40f);
+                uint8_t r = (uint8_t)(data[idx] * 0.50f);
+                uint8_t g = (uint8_t)(data[idx + 1] * 0.50f);
+                uint8_t b = (uint8_t)(data[idx + 2] * 0.50f);
 
-                gui->bg_pixels[y * GUI_WIDTH + x] = (0xFF << 24) | (r << 16) | (g << 8) | b;
+                gui->bg_pixels[y * FB_WIDTH + x] = (0xFF << 24) | (r << 16) | (g << 8) | b;
             }
         }
         stbi_image_free(data);
     } else {
-        for (int i = 0; i < GUI_WIDTH * GUI_HEIGHT; ++i) {
+        for (int i = 0; i < FB_WIDTH * FB_HEIGHT; ++i) {
             gui->bg_pixels[i] = (0xFF << 24) | (20 << 16) | (22 << 8) | 26;
         }
     }
@@ -145,7 +145,7 @@ static void draw_tab_fx(GranularSynth *synth) {
 void gui_render_frame(GranularSynth *synth) {
     if (!synth || !synth->gui.is_open || !synth->gui.native_view) return;
 
-    draw_copy_bg(synth->gui.pixels, synth->gui.bg_pixels, GUI_WIDTH * GUI_HEIGHT);
+    draw_copy_bg(synth->gui.pixels, synth->gui.bg_pixels, FB_WIDTH * FB_HEIGHT);
 
     draw_rect_panel(synth->gui.pixels, 0, 0, GUI_WIDTH, 50, 0xD0181A1F, 0xFF282C34);
     draw_text(synth->gui.pixels, 20, 20, "LUKYAN SYNTH  //  POLYPHONIC GRANULAR", 0xFFE5C07B);
@@ -162,14 +162,15 @@ void gui_render_frame(GranularSynth *synth) {
 
 #if defined(__APPLE__)
     CGColorSpaceRef color_space = CGColorSpaceCreateDeviceRGB();
-    CGDataProviderRef provider = CGDataProviderCreateWithData(NULL, synth->gui.pixels, GUI_WIDTH * GUI_HEIGHT * 4, NULL);
-    CGImageRef image = CGImageCreate(GUI_WIDTH, GUI_HEIGHT, 8, 32, GUI_WIDTH * 4, color_space,
+    CGDataProviderRef provider = CGDataProviderCreateWithData(NULL, synth->gui.pixels, FB_WIDTH * FB_HEIGHT * 4, NULL);
+    CGImageRef image = CGImageCreate(FB_WIDTH, FB_HEIGHT, 8, 32, FB_WIDTH * 4, color_space,
                                      kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Host,
                                      provider, NULL, false, kCGRenderingIntentDefault);
 
     id view = (id)synth->gui.native_view;
     id layer = ((id (*)(id, SEL))objc_msgSend)(view, sel_registerName("layer"));
     if (layer) {
+        ((void (*)(id, SEL, CGFloat))objc_msgSend)(layer, sel_registerName("setContentsScale:"), (CGFloat)GUI_SCALE);
         ((void (*)(id, SEL, id))objc_msgSend)(layer, sel_registerName("setContents:"), (id)image);
     }
 

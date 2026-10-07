@@ -8,6 +8,9 @@
 
 #define GUI_WIDTH 800
 #define GUI_HEIGHT 500
+#define GUI_SCALE 2
+#define FB_WIDTH (GUI_WIDTH * GUI_SCALE)   // 1600px
+#define FB_HEIGHT (GUI_HEIGHT * GUI_SCALE) // 1000px
 
 typedef enum {
     TAB_OSC = 0,
@@ -15,8 +18,8 @@ typedef enum {
 } GuiTab;
 
 typedef struct GuiState {
-    uint32_t pixels[GUI_WIDTH * GUI_HEIGHT];
-    uint32_t bg_pixels[GUI_WIDTH * GUI_HEIGHT];
+    uint32_t pixels[FB_WIDTH * FB_HEIGHT];
+    uint32_t bg_pixels[FB_WIDTH * FB_HEIGHT];
     void *native_view;
     void *parent_window;
     bool is_open;
