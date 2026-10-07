@@ -18,6 +18,7 @@ enum {
     PARAM_DECAY,
     PARAM_SUSTAIN,
     PARAM_RELEASE,
+    PARAM_GAIN,
     PARAM_COUNT
 };
 
@@ -32,6 +33,7 @@ typedef struct {
     double decay;
     double sustain;
     double release;
+    double gain;
 
     GranularEngine engine;
 } GranularSynth;
@@ -165,6 +167,15 @@ static bool plugin_params_get_info(const clap_plugin_t *plugin, uint32_t index, 
             info->default_value = 350.0;
             return true;
 
+        case PARAM_GAIN:
+            info->id = PARAM_GAIN;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            strncpy(info->name, "Master Gain", sizeof(info->name));
+            info->min_value = 0.0;
+            info->max_value = 1.0;
+            info->default_value = 0.75;
+            return true;
+
         default:
             return false;
     }
@@ -182,6 +193,7 @@ static bool plugin_params_get_value(const clap_plugin_t *plugin, clap_id param_i
         case PARAM_DECAY:      *out_value = synth->decay; return true;
         case PARAM_SUSTAIN:    *out_value = synth->sustain; return true;
         case PARAM_RELEASE:    *out_value = synth->release; return true;
+        case PARAM_GAIN:       *out_value = synth->gain; return true;
         default: return false;
     }
 }
@@ -198,6 +210,7 @@ static bool plugin_params_value_to_text(const clap_plugin_t *plugin, clap_id par
         case PARAM_DECAY:      snprintf(out_buffer, out_buffer_capacity, "%.1f ms", value); return true;
         case PARAM_SUSTAIN:    snprintf(out_buffer, out_buffer_capacity, "%.2f", value); return true;
         case PARAM_RELEASE:    snprintf(out_buffer, out_buffer_capacity, "%.1f ms", value); return true;
+        case PARAM_GAIN:       snprintf(out_buffer, out_buffer_capacity, "%.0f %%", value * 100.0); return true;
         default: return false;
     }
 }
@@ -236,6 +249,10 @@ static void apply_param_value(GranularSynth *synth, clap_id param_id, double val
         case PARAM_RELEASE:
             synth->release = value;
             granular_set_release(&synth->engine, (float)value);
+            break;
+        case PARAM_GAIN:
+            synth->gain = value;
+            granular_set_gain(&synth->engine, (float)value);
             break;
     }
 }
@@ -277,7 +294,8 @@ static bool plugin_state_save(const clap_plugin_t *plugin, const clap_ostream_t 
         synth->attack,
         synth->decay,
         synth->sustain,
-        synth->release
+        synth->release,
+        synth->gain
     };
     int64_t written = stream->write(stream, state_data, sizeof(state_data));
     return written == sizeof(state_data);
@@ -332,6 +350,7 @@ static bool plugin_activate(const struct clap_plugin *plugin,
     synth->decay = 200.0;
     synth->sustain = 0.75;
     synth->release = 350.0;
+    synth->gain = 0.75;
 
     granular_init(&synth->engine, sample_rate);
     for (int i = 0; i < PARAM_COUNT; ++i) {

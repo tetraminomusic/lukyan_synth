@@ -44,6 +44,7 @@ typedef struct {
     float grain_size_ms;
     float density;
     float spray;
+    float gain;
 
     float attack_ms;
     float decay_ms;
@@ -63,6 +64,7 @@ void granular_reset(GranularEngine *engine);
 void granular_set_grain_size(GranularEngine *engine, float size_ms);
 void granular_set_density(GranularEngine *engine, float density);
 void granular_set_spray(GranularEngine *engine, float spray);
+void granular_set_gain(GranularEngine *engine, float gain);
 void granular_set_attack(GranularEngine *engine, float attack_ms);
 void granular_set_decay(GranularEngine *engine, float decay_ms);
 void granular_set_sustain(GranularEngine *engine, float sustain);

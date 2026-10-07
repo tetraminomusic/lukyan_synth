@@ -36,6 +36,7 @@ void granular_init(GranularEngine *engine, double sample_rate) {
     engine->grain_size_ms = 65.0f;
     engine->density = 30.0f;
     engine->spray = 0.15f;
+    engine->gain = 0.75f;
 
     engine->attack_ms = 20.0f;
     engine->decay_ms = 200.0f;
@@ -70,6 +71,10 @@ void granular_set_density(GranularEngine *engine, float density) {
 
 void granular_set_spray(GranularEngine *engine, float spray) {
     engine->spray = spray;
+}
+
+void granular_set_gain(GranularEngine *engine, float gain) {
+    engine->gain = gain;
 }
 
 void granular_set_attack(GranularEngine *engine, float attack_ms) {
@@ -250,6 +255,6 @@ void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) 
         }
     }
 
-    *out_l = tanhf(mixed_l * 1.15f) * 0.85f;
-    *out_r = tanhf(mixed_r * 1.15f) * 0.85f;
+    *out_l = tanhf(mixed_l * 1.15f) * 0.85f * engine->gain;
+    *out_r = tanhf(mixed_r * 1.15f) * 0.85f * engine->gain;
 }
