@@ -24,6 +24,28 @@ typedef struct {
     const char *label;
 } KnobLayout;
 
+// ЕДИНАЯ ТАБЛИЦА РУЧЕК ОСЦИЛЛЯТОРОВ (И ДЛЯ ОТРИСОВКИ, И ДЛЯ МЫШИ)
+static const KnobLayout KNOBS_OSC[] = {
+    { PARAM_OSC1_GAIN, 65, 140, 20, "Получить" }, { PARAM_OSC1_SEMI, 137, 140, 20, "Половина" }, { PARAM_OSC1_MORPH, 210, 140, 20, "Форма" },
+    { PARAM_OSC2_GAIN, 325, 140, 20, "Получить" }, { PARAM_OSC2_SEMI, 397, 140, 20, "Половина" }, { PARAM_OSC2_MORPH, 470, 140, 20, "Форма" },
+    { PARAM_OSC3_GAIN, 585, 140, 20, "Получить" }, { PARAM_OSC3_SEMI, 660, 140, 20, "Половина" }, { PARAM_OSC3_MORPH, 735, 140, 20, "Форма" },
+    { PARAM_GRAIN_SIZE, 75, 385, 22, "Размер" }, { PARAM_DENSITY, 195, 385, 22, "Плотность" }, { PARAM_SPRAY, 315, 385, 22, "Спрей" },
+    { PARAM_ATTACK, 460, 370, 18, "Нападение" }, { PARAM_DECAY, 525, 370, 18, "Отложенное" }, { PARAM_SUSTAIN, 590, 370, 18, "Продолжение" },
+    { PARAM_RELEASE, 655, 370, 18, "Выпуск" }, { PARAM_GAIN, 730, 370, 18, "Мастер" }
+};
+
+// ЕДИНАЯ ТАБЛИЦА РУЧЕК ЭФФЕКТОВ
+static const KnobLayout KNOBS_FX[] = {
+    { PARAM_CUTOFF, 80, 145, 22, "Обрезание" }, { PARAM_RESONANCE, 190, 145, 22, "Резонансик" },
+    { PARAM_CRUSH, 340, 145, 22, "Биты" }, { PARAM_DOWNSAMPLE, 450, 145, 22, "Частота" },
+    { PARAM_PHASER_MIX, 568, 135, 17, "Смесь" },
+    { PARAM_PHASER_RATE, 626, 135, 17, "Частота" },
+    { PARAM_PHASER_DEPTH, 684, 135, 17, "Дно" },
+    { PARAM_PHASER_FEEDBACK, 742, 135, 17, "Fbk" },
+    { PARAM_CHORUS_MIX, 80, 370, 22, "Смесь" }, { PARAM_CHORUS_RATE, 195, 370, 22, "Частота" }, { PARAM_CHORUS_DEPTH, 310, 370, 22, "Дно" },
+    { PARAM_REVERB_MIX, 480, 370, 22, "Смесь" }, { PARAM_REVERB_SIZE, 595, 370, 22, "Размер" }, { PARAM_REVERB_DAMP, 710, 370, 22, "Сырость" }
+};
+
 void gui_init(GuiState *gui) {
     gui->native_view = NULL;
     gui->parent_window = NULL;
@@ -61,28 +83,19 @@ static void draw_tab_osc(GranularSynth *synth) {
     uint32_t *px = synth->gui.pixels;
 
     draw_rect_panel(px, 15, 60, 245, 230, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 25, 70, "OSCILLATOR 1", 0xFF61AFEF);
+    draw_text(px, 25, 70, "ОСЦИЛЛЯТОР 1", 0xFF61AFEF);
 
     draw_rect_panel(px, 275, 60, 245, 230, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 285, 70, "OSCILLATOR 2", 0xFF98C379);
+    draw_text(px, 285, 70, "ОСЦИЛЛЯТОР 2", 0xFF98C379);
 
     draw_rect_panel(px, 535, 60, 250, 230, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 545, 70, "OSCILLATOR 3", 0xFFE5C07B);
+    draw_text(px, 545, 70, "ОСЦИЛЛЯТОР 3", 0xFFE5C07B);
 
     draw_rect_panel(px, 15, 305, 380, 180, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 25, 315, "GRANULAR CLOUD", 0xFFC678DD);
+    draw_text(px, 25, 315, "ГРАНУЛЯРНОЕ ОБЛАКО", 0xFFC678DD);
 
     draw_rect_panel(px, 410, 305, 375, 180, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 420, 315, "ADSR ENVELOPE & MASTER", 0xFFE06C75);
-
-    static const KnobLayout KNOBS_OSC[] = {
-        { PARAM_OSC1_GAIN, 65, 140, 20, "Gain" }, { PARAM_OSC1_SEMI, 137, 140, 20, "Semi" }, { PARAM_OSC1_MORPH, 210, 140, 20, "Morph" },
-        { PARAM_OSC2_GAIN, 325, 140, 20, "Gain" }, { PARAM_OSC2_SEMI, 397, 140, 20, "Semi" }, { PARAM_OSC2_MORPH, 470, 140, 20, "Morph" },
-        { PARAM_OSC3_GAIN, 585, 140, 20, "Gain" }, { PARAM_OSC3_SEMI, 660, 140, 20, "Semi" }, { PARAM_OSC3_MORPH, 735, 140, 20, "Morph" },
-        { PARAM_GRAIN_SIZE, 75, 385, 22, "Size" }, { PARAM_DENSITY, 195, 385, 22, "Density" }, { PARAM_SPRAY, 315, 385, 22, "Spray" },
-        { PARAM_ATTACK, 460, 370, 18, "Attack" }, { PARAM_DECAY, 525, 370, 18, "Decay" }, { PARAM_SUSTAIN, 590, 370, 18, "Sustain" },
-        { PARAM_RELEASE, 655, 370, 18, "Release" }, { PARAM_GAIN, 730, 370, 18, "Master" }
-    };
+    draw_text(px, 420, 315, "ОГИБАЮЩАЯ И МАСТЕР", 0xFFE06C75);
 
     for (size_t i = 0; i < sizeof(KNOBS_OSC) / sizeof(KNOBS_OSC[0]); ++i) {
         int id = KNOBS_OSC[i].id;
@@ -104,32 +117,19 @@ static void draw_tab_fx(GranularSynth *synth) {
     uint32_t *px = synth->gui.pixels;
 
     draw_rect_panel(px, 15, 60, 245, 200, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 25, 70, "FILTER (SVF)", 0xFF61AFEF);
+    draw_text(px, 25, 70, "верхний пропуск фильтрованнное", 0xFF61AFEF);
 
     draw_rect_panel(px, 275, 60, 245, 200, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 285, 70, "LO-FI CRUNCH", 0xFFE06C75);
+    draw_text(px, 285, 70, "низкое качество биткрашер кранч", 0xFFE06C75);
 
     draw_rect_panel(px, 535, 60, 250, 200, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 545, 70, "PHASER (4-STAGE)", 0xFFE5C07B);
+    draw_text(px, 545, 70, "Фазер мазер", 0xFFE5C07B);
 
     draw_rect_panel(px, 15, 280, 380, 205, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 25, 290, "STEREO CHORUS", 0xFF98C379);
+    draw_text(px, 25, 290, "Два-припев", 0xFF98C379);
 
     draw_rect_panel(px, 410, 280, 375, 205, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 420, 290, "SCHROEDER REVERB", 0xFFC678DD);
-
-    static const KnobLayout KNOBS_FX[] = {
-        { PARAM_CUTOFF, 80, 145, 22, "Cutoff" }, { PARAM_RESONANCE, 190, 145, 22, "Res" },
-        { PARAM_CRUSH, 340, 145, 22, "Bits" }, { PARAM_DOWNSAMPLE, 450, 145, 22, "Rate" },
-        
-        { PARAM_PHASER_MIX, 568, 135, 17, "Mix" },
-        { PARAM_PHASER_RATE, 626, 135, 17, "Rate" },
-        { PARAM_PHASER_DEPTH, 684, 135, 17, "Depth" },
-        { PARAM_PHASER_FEEDBACK, 742, 135, 17, "Fbk" },
-
-        { PARAM_CHORUS_MIX, 80, 370, 22, "Mix" }, { PARAM_CHORUS_RATE, 195, 370, 22, "Rate" }, { PARAM_CHORUS_DEPTH, 310, 370, 22, "Depth" },
-        { PARAM_REVERB_MIX, 480, 370, 22, "Mix" }, { PARAM_REVERB_SIZE, 595, 370, 22, "Size" }, { PARAM_REVERB_DAMP, 710, 370, 22, "Damp" }
-    };
+    draw_text(px, 420, 290, "ревёрбчик", 0xFFC678DD);
 
     for (size_t i = 0; i < sizeof(KNOBS_FX) / sizeof(KNOBS_FX[0]); ++i) {
         int id = KNOBS_FX[i].id;
@@ -156,8 +156,8 @@ void gui_render_frame(GranularSynth *synth) {
     draw_text(synth->gui.pixels, 20, 20, "Лукьянчик синт  //  ЛЕГЕНДАРНЫЙ ШЛЯГЕРНЫЙ СИНТ", 0xFFE5C07B);
     draw_text(synth->gui.pixels, 340, 20, "от тетраминыча", 0xFF5C6370);
 
-    draw_button(synth->gui.pixels, 520, 12, 125, 28, "1. OSC & CORE", synth->gui.current_tab == TAB_OSC);
-    draw_button(synth->gui.pixels, 655, 12, 125, 28, "2. FX RACK", synth->gui.current_tab == TAB_FX);
+    draw_button(synth->gui.pixels, 520, 12, 125, 28, "Осциляторы и всякое", synth->gui.current_tab == TAB_OSC);
+    draw_button(synth->gui.pixels, 655, 12, 125, 28, "Спецэффекты братух", synth->gui.current_tab == TAB_FX);
 
     if (synth->gui.current_tab == TAB_OSC) {
         draw_tab_osc(synth);
@@ -202,14 +202,6 @@ void gui_handle_mouse_down(GranularSynth *synth, float mx, float my) {
     int clicked_param = -1;
 
     if (synth->gui.current_tab == TAB_OSC) {
-        static const KnobLayout KNOBS_OSC[] = {
-            { PARAM_OSC1_GAIN, 65, 140, 20, "Gain" }, { PARAM_OSC1_SEMI, 137, 140, 20, "Semi" }, { PARAM_OSC1_MORPH, 210, 140, 20, "Morph" },
-            { PARAM_OSC2_GAIN, 325, 140, 20, "Gain" }, { PARAM_OSC2_SEMI, 397, 140, 20, "Semi" }, { PARAM_OSC2_MORPH, 470, 140, 20, "Morph" },
-            { PARAM_OSC3_GAIN, 585, 140, 20, "Gain" }, { PARAM_OSC3_SEMI, 660, 140, 20, "Semi" }, { PARAM_OSC3_MORPH, 735, 140, 20, "Morph" },
-            { PARAM_GRAIN_SIZE, 75, 385, 22, "Size" }, { PARAM_DENSITY, 195, 385, 22, "Density" }, { PARAM_SPRAY, 315, 385, 22, "Spray" },
-            { PARAM_ATTACK, 460, 370, 18, "Attack" }, { PARAM_DECAY, 525, 370, 18, "Decay" }, { PARAM_SUSTAIN, 590, 370, 18, "Sustain" },
-            { PARAM_RELEASE, 655, 370, 18, "Release" }, { PARAM_GAIN, 730, 370, 18, "Master" }
-        };
         for (size_t i = 0; i < sizeof(KNOBS_OSC) / sizeof(KNOBS_OSC[0]); ++i) {
             float dx = mx - (float)KNOBS_OSC[i].cx;
             float dy = my - (float)KNOBS_OSC[i].cy;
@@ -219,16 +211,6 @@ void gui_handle_mouse_down(GranularSynth *synth, float mx, float my) {
             }
         }
     } else {
-        static const KnobLayout KNOBS_FX[] = {
-            { PARAM_CUTOFF, 80, 145, 22, "Cutoff" }, { PARAM_RESONANCE, 190, 145, 22, "Res" },
-            { PARAM_CRUSH, 340, 145, 22, "Bits" }, { PARAM_DOWNSAMPLE, 450, 145, 22, "Rate" },
-            { PARAM_PHASER_MIX, 568, 135, 17, "Mix" },
-            { PARAM_PHASER_RATE, 626, 135, 17, "Rate" },
-            { PARAM_PHASER_DEPTH, 684, 135, 17, "Depth" },
-            { PARAM_PHASER_FEEDBACK, 742, 135, 17, "Fbk" },
-            { PARAM_CHORUS_MIX, 80, 370, 22, "Mix" }, { PARAM_CHORUS_RATE, 195, 370, 22, "Rate" }, { PARAM_CHORUS_DEPTH, 310, 370, 22, "Depth" },
-            { PARAM_REVERB_MIX, 480, 370, 22, "Mix" }, { PARAM_REVERB_SIZE, 595, 370, 22, "Size" }, { PARAM_REVERB_DAMP, 710, 370, 22, "Damp" }
-        };
         for (size_t i = 0; i < sizeof(KNOBS_FX) / sizeof(KNOBS_FX[0]); ++i) {
             float dx = mx - (float)KNOBS_FX[i].cx;
             float dy = my - (float)KNOBS_FX[i].cy;
@@ -421,8 +403,4 @@ const clap_plugin_gui_t g_gui_extension = {
     .adjust_size = gui_adjust_size,
     .set_size = gui_set_size,
     .set_parent = gui_set_parent,
-    .set_transient = gui_set_transient,
-    .suggest_title = gui_suggest_title,
-    .show = gui_show,
-    .hide = gui_hide,
-};
+    .set_transient = gui_set_transie
