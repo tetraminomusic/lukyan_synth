@@ -31,7 +31,7 @@ void gui_init(GuiState *gui) {
     gui->active_param_id = -1;
 
     int img_w = 0, img_h = 0, channels = 0;
-    unsigned char *data = stbi_load_from_memory(steve_png, steve_png_len, &img_w, &img_h, &channels, 4);
+    unsigned char *data = stbi_load_from_memory(photo_png, photo_png_len, &img_w, &img_h, &channels, 4);
     (void)channels;
 
     if (data && img_w > 0 && img_h > 0) {
@@ -274,8 +274,8 @@ static void mac_mouse_down(id self, SEL _cmd, id event) {
     GranularSynth *synth = (GranularSynth *)objc_getAssociatedObject(self, "synth");
     if (!synth) return;
 
-    CGPoint p = ((CGPoint (*)(id, SEL, id))objc_msgSend)(self, sel_registerName("convertPoint:fromView:"),
-                ((CGPoint (*)(id, SEL))objc_msgSend)(event, sel_registerName("locationInWindow")), nil);
+    CGPoint win_p = ((CGPoint (*)(id, SEL))objc_msgSend)(event, sel_registerName("locationInWindow"));
+    CGPoint p = ((CGPoint (*)(id, SEL, CGPoint, id))objc_msgSend)(self, sel_registerName("convertPoint:fromView:"), win_p, (id)NULL);
     gui_handle_mouse_down(synth, (float)p.x, (float)(GUI_HEIGHT - p.y));
 }
 
@@ -284,8 +284,8 @@ static void mac_mouse_dragged(id self, SEL _cmd, id event) {
     GranularSynth *synth = (GranularSynth *)objc_getAssociatedObject(self, "synth");
     if (!synth) return;
 
-    CGPoint p = ((CGPoint (*)(id, SEL, id))objc_msgSend)(self, sel_registerName("convertPoint:fromView:"),
-                ((CGPoint (*)(id, SEL))objc_msgSend)(event, sel_registerName("locationInWindow")), nil);
+    CGPoint win_p = ((CGPoint (*)(id, SEL))objc_msgSend)(event, sel_registerName("locationInWindow"));
+    CGPoint p = ((CGPoint (*)(id, SEL, CGPoint, id))objc_msgSend)(self, sel_registerName("convertPoint:fromView:"), win_p, (id)NULL);
     gui_handle_mouse_drag(synth, (float)p.x, (float)(GUI_HEIGHT - p.y));
 }
 
