@@ -43,6 +43,13 @@ void granular_init(GranularEngine *engine, double sample_rate) {
     engine->sustain = 0.75f;
     engine->release_ms = 350.0f;
 
+    engine->crush_bits = 16.0f;
+    engine->downsample = 1.0f;
+    engine->ds_counter = 0.0f;
+    engine->held_sample_l = 0.0f;
+    engine->held_sample_r = 0.0f;
+    engine->pitch_bend_semitones = 0.0f;
+
     init_hann_lut(engine);
     init_sample_buffer(engine);
 
@@ -93,6 +100,18 @@ void granular_set_release(GranularEngine *engine, float release_ms) {
     engine->release_ms = release_ms;
 }
 
+void granular_set_crush(GranularEngine *engine, float bits) {
+    engine->crush_bits = bits;
+}
+
+void granular_set_downsample(GranularEngine *engine, float factor) {
+    engine->downsample = factor;
+}
+
+void granular_set_pitch_bend(GranularEngine *engine, float semitones) {
+    engine->pitch_bend_semitones = semitones;
+}
+
 void granular_note_on(GranularEngine *engine, int32_t key, float frequency) {
     int target_idx = -1;
 
@@ -136,6 +155,7 @@ void granular_reset(GranularEngine *engine) {
     }
     engine->playhead = 0.0f;
     engine->next_voice_rr = 0;
+    engine->pitch_bend_semitones = 0.0f;
 }
 
 static void spawn_grain(GranularEngine *engine, float frequency, float amp) {
@@ -149,8 +169,10 @@ static void spawn_grain(GranularEngine *engine, float frequency, float amp) {
             while (start_pos < 0.0f) start_pos += (float)SAMPLE_BUFFER_SIZE;
             while (start_pos >= (float)SAMPLE_BUFFER_SIZE) start_pos -= (float)SAMPLE_BUFFER_SIZE;
 
+            float bent_freq = frequency * powf(2.0f, engine->pitch_bend_semitones / 12.0f);
+
             engine->grains[i].pos = start_pos;
-            engine->grains[i].speed = frequency / BASE_ROOT_FREQ;
+            engine->grains[i].speed = bent_freq / BASE_ROOT_FREQ;
             engine->grains[i].length = (float)engine->sample_rate * (engine->grain_size_ms / 1000.0f);
             engine->grains[i].progress = 0.0f;
             engine->grains[i].pan = (float)(rand() % 1000) / 1000.0f;
@@ -255,6 +277,26 @@ void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) 
         }
     }
 
-    *out_l = tanhf(mixed_l * 1.15f) * 0.85f * engine->gain;
-    *out_r = tanhf(mixed_r * 1.15f) * 0.85f * engine->gain;
+    float out_raw_l = tanhf(mixed_l * 1.15f) * 0.85f * engine->gain;
+    float out_raw_r = tanhf(mixed_r * 1.15f) * 0.85f * engine->gain;
+
+    if (engine->downsample > 1.05f) {
+        engine->ds_counter += 1.0f;
+        if (engine->ds_counter >= engine->downsample) {
+            engine->ds_counter = 0.0f;
+            engine->held_sample_l = out_raw_l;
+            engine->held_sample_r = out_raw_r;
+        }
+        out_raw_l = engine->held_sample_l;
+        out_raw_r = engine->held_sample_r;
+    }
+
+    if (engine->crush_bits < 15.9f) {
+        float levels = powf(2.0f, engine->crush_bits);
+        out_raw_l = roundf(out_raw_l * levels) / levels;
+        out_raw_r = roundf(out_raw_r * levels) / levels;
+    }
+
+    *out_l = out_raw_l;
+    *out_r = out_raw_r;
 }
