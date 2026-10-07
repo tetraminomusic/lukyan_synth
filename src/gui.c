@@ -353,6 +353,11 @@ static LRESULT CALLBACK win32_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
 
                 RECT rc;
                 GetClientRect(hwnd, &rc);
+                
+                // Включаем сглаживание и субпиксельную интерполяцию GDI
+                SetStretchBltMode(hdc, HALFTONE);
+                SetBrushOrgEx(hdc, 0, 0, NULL);
+
                 StretchDIBits(hdc, 0, 0, rc.right - rc.left, rc.bottom - rc.top,
                               0, 0, FB_WIDTH, FB_HEIGHT,
                               synth->gui.pixels, &bmi, DIB_RGB_COLORS, SRCCOPY);
