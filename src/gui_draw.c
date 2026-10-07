@@ -40,6 +40,27 @@ static const uint8_t FONT_5X7[95][5] = {
     {0x00, 0x41, 0x36, 0x08, 0x00}, {0x08, 0x08, 0x2A, 0x1C, 0x08}
 };
 
+static const uint8_t GLYPH_B[5] = {0x7F, 0x49, 0x49, 0x49, 0x31}; // Б
+static const uint8_t GLYPH_G[5] = {0x7F, 0x01, 0x01, 0x01, 0x01}; // Г
+static const uint8_t GLYPH_D[5] = {0x60, 0x3F, 0x21, 0x3F, 0x60}; // Д
+static const uint8_t GLYPH_ZH[5] = {0x49, 0x2A, 0x7F, 0x2A, 0x49}; // Ж
+static const uint8_t GLYPH_Z[5] = {0x22, 0x49, 0x49, 0x49, 0x36}; // З
+static const uint8_t GLYPH_I[5] = {0x7F, 0x10, 0x08, 0x04, 0x7F}; // И
+static const uint8_t GLYPH_YI[5] = {0x7F, 0x12, 0x09, 0x04, 0x7F}; // Й
+static const uint8_t GLYPH_L[5] = {0x60, 0x1F, 0x01, 0x01, 0x7F}; // Л
+static const uint8_t GLYPH_P[5] = {0x7F, 0x01, 0x01, 0x01, 0x7F}; // П
+static const uint8_t GLYPH_F[5] = {0x1C, 0x22, 0x7F, 0x22, 0x1C}; // Ф
+static const uint8_t GLYPH_TS[5] = {0x3F, 0x20, 0x20, 0x3F, 0xC0}; // Ц
+static const uint8_t GLYPH_CH[5] = {0x0F, 0x08, 0x08, 0x08, 0x7F}; // Ч
+static const uint8_t GLYPH_SH[5] = {0x7F, 0x40, 0x7F, 0x40, 0x7F}; // Ш
+static const uint8_t GLYPH_SHCH[5] = {0x3F, 0x20, 0x3F, 0x20, 0xE0}; // Щ
+static const uint8_t GLYPH_HARD[5] = {0x01, 0x7F, 0x48, 0x48, 0x30}; // Ъ
+static const uint8_t GLYPH_Y[5] = {0x7F, 0x48, 0x30, 0x00, 0x7F}; // Ы
+static const uint8_t GLYPH_SOFT[5] = {0x7F, 0x48, 0x48, 0x48, 0x30}; // Ь
+static const uint8_t GLYPH_EE[5] = {0x22, 0x49, 0x49, 0x41, 0x3E}; // Э
+static const uint8_t GLYPH_YU[5] = {0x7F, 0x08, 0x3E, 0x41, 0x3E}; // Ю
+static const uint8_t GLYPH_YA[5] = {0x46, 0x29, 0x19, 0x09, 0x7F}; // Я
+
 void draw_copy_bg(uint32_t *dst, const uint32_t *src, int count) {
     memcpy(dst, src, count * sizeof(uint32_t));
 }
@@ -78,18 +99,78 @@ void draw_rect_panel(uint32_t *pixels, int x, int y, int w, int h, uint32_t bg_c
     }
 }
 
+static const uint8_t *get_glyph(uint32_t cp) {
+    if (cp >= 32 && cp <= 126) {
+        return FONT_5X7[cp - 32];
+    }
+
+    if (cp >= 0x0430 && cp <= 0x044F) cp -= 0x20;
+    if (cp == 0x0451) cp = 0x0401;
+
+    switch (cp) {
+        case 0x0410: return FONT_5X7['A' - 32];
+        case 0x0411: return GLYPH_B;
+        case 0x0412: return FONT_5X7['B' - 32];
+        case 0x0413: return GLYPH_G;
+        case 0x0414: return GLYPH_D;
+        case 0x0415: return FONT_5X7['E' - 32];
+        case 0x0401: return FONT_5X7['E' - 32];
+        case 0x0416: return GLYPH_ZH;
+        case 0x0417: return GLYPH_Z;
+        case 0x0418: return GLYPH_I;
+        case 0x0419: return GLYPH_YI;
+        case 0x041A: return FONT_5X7['K' - 32];
+        case 0x041B: return GLYPH_L;
+        case 0x041C: return FONT_5X7['M' - 32];
+        case 0x041D: return FONT_5X7['H' - 32];
+        case 0x041E: return FONT_5X7['O' - 32];
+        case 0x041F: return GLYPH_P;
+        case 0x0420: return FONT_5X7['P' - 32];
+        case 0x0421: return FONT_5X7['C' - 32];
+        case 0x0422: return FONT_5X7['T' - 32];
+        case 0x0423: return FONT_5X7['Y' - 32];
+        case 0x0424: return GLYPH_F;
+        case 0x0425: return FONT_5X7['X' - 32];
+        case 0x0426: return GLYPH_TS;
+        case 0x0427: return GLYPH_CH;
+        case 0x0428: return GLYPH_SH;
+        case 0x0429: return GLYPH_SHCH;
+        case 0x042A: return GLYPH_HARD;
+        case 0x042B: return GLYPH_Y;
+        case 0x042C: return GLYPH_SOFT;
+        case 0x042D: return GLYPH_EE;
+        case 0x042E: return GLYPH_YU;
+        case 0x042F: return GLYPH_YA;
+        default: return FONT_5X7['?' - 32];
+    }
+}
+
 void draw_text(uint32_t *pixels, int x, int y, const char *str, uint32_t color) {
     if (!str) return;
     int cur_x = x * GUI_SCALE;
     int base_y = y * GUI_SCALE;
 
-    while (*str) {
-        char c = *str++;
-        if (c < 32 || c > 126) c = '?';
-        int idx = c - 32;
+    const unsigned char *p = (const unsigned char *)str;
+
+    while (*p) {
+        uint32_t cp = 0;
+        if (*p < 0x80) {
+            cp = *p++;
+        } else if ((*p & 0xE0) == 0xC0) {
+            cp = ((*p & 0x1F) << 6) | (*(p + 1) & 0x3F);
+            p += 2;
+        } else if ((*p & 0xF0) == 0xE0) {
+            cp = ((*p & 0x0F) << 12) | ((*(p + 1) & 0x3F) << 6) | (*(p + 2) & 0x3F);
+            p += 3;
+        } else {
+            p++;
+            continue;
+        }
+
+        const uint8_t *glyph = get_glyph(cp);
 
         for (int col = 0; col < 5; ++col) {
-            uint8_t line = FONT_5X7[idx][col];
+            uint8_t line = glyph[col];
             for (int row = 0; row < 7; ++row) {
                 if (line & (1 << row)) {
                     for (int dy = 0; dy < GUI_SCALE; ++dy) {
@@ -115,7 +196,16 @@ void draw_button(uint32_t *pixels, int x, int y, int w, int h, const char *label
 
     draw_rect_panel(pixels, x, y, w, h, bg, border);
 
-    int text_len = (int)strlen(label) * 6;
+    int char_count = 0;
+    const unsigned char *p = (const unsigned char *)label;
+    while (*p) {
+        if (*p < 0x80) p++;
+        else if ((*p & 0xE0) == 0xC0) p += 2;
+        else p++;
+        char_count++;
+    }
+
+    int text_len = char_count * 6;
     int tx = x + (w - text_len) / 2;
     int ty = y + (h - 7) / 2;
     draw_text(pixels, tx, ty, label, txt);
@@ -171,7 +261,16 @@ void draw_knob(uint32_t *pixels, int cx, int cy, int radius, float norm_val, con
         }
     }
 
-    int name_len = (int)strlen(name) * 6;
+    int char_count = 0;
+    const unsigned char *cp = (const unsigned char *)name;
+    while (*cp) {
+        if (*cp < 0x80) cp++;
+        else if ((*cp & 0xE0) == 0xC0) cp += 2;
+        else cp++;
+        char_count++;
+    }
+
+    int name_len = char_count * 6;
     draw_text(pixels, cx - name_len / 2, cy + radius + 4, name, 0xFFABB2BF);
 
     int val_len = (int)strlen(val_str) * 6;
