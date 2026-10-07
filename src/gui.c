@@ -109,16 +109,16 @@ static void draw_tab_osc(GranularSynth *synth) {
     bool is_ru = (synth->gui.current_lang == LANG_MEME_RU);
 
     draw_rect_panel(px, 15, 60, 245, 230, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 25, 70, is_ru ? "ОСЦИЛЛЯТОР 1" : "OSCILLATOR 1", 0xFF61AFEF);
+    draw_text(px, 25, 70, is_ru ? "Генератор 1" : "OSCILLATOR 1", 0xFF61AFEF);
 
     draw_rect_panel(px, 275, 60, 245, 230, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 285, 70, is_ru ? "ОСЦИЛЛЯТОР 2" : "OSCILLATOR 2", 0xFF98C379);
+    draw_text(px, 285, 70, is_ru ? "Генератор 2" : "OSCILLATOR 2", 0xFF98C379);
 
     draw_rect_panel(px, 535, 60, 250, 230, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 545, 70, is_ru ? "ОСЦИЛЛЯТОР 3" : "OSCILLATOR 3", 0xFFE5C07B);
+    draw_text(px, 545, 70, is_ru ? "Генератор 3" : "OSCILLATOR 3", 0xFFE5C07B);
 
     draw_rect_panel(px, 15, 305, 380, 180, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 25, 315, is_ru ? "ГРАНУЛЯРНОЕ ОБЛАКО" : "GRANULAR CLOUD", 0xFFC678DD);
+    draw_text(px, 25, 315, is_ru ? "Зерно облако" : "GRANULAR CLOUD", 0xFFC678DD);
 
     draw_rect_panel(px, 410, 305, 375, 180, 0xA01E222A, 0xFF3E4451);
     draw_text(px, 420, 315, is_ru ? "КОНВЕРТ И ГОСПОДИН" : "ADSR & MASTER", 0xFFE06C75);
@@ -186,14 +186,14 @@ void gui_render_frame(GranularSynth *synth) {
     bool is_ru = (synth->gui.current_lang == LANG_MEME_RU);
     if (is_ru) {
         draw_text(synth->gui.pixels, 15, 20, "ЛУКЬЯНЧИК СИНТ", 0xFFE5C07B);
-        draw_text(synth->gui.pixels, 120, 20, "// ШЛЯГЕР", 0xFF5C6370);
+        draw_text(synth->gui.pixels, 120, 20, "// ЛЕГЕНДАРНЫЙ ШЛЯГЕРНЫЙ СИНТ", 0xFF5C6370);
     } else {
         draw_text(synth->gui.pixels, 15, 20, "LUKYAN SYNTH", 0xFFE5C07B);
-        draw_text(synth->gui.pixels, 110, 20, "// GRANULAR", 0xFF5C6370);
+        draw_text(synth->gui.pixels, 110, 20, "// GRANULAR POLYPHONIC SYNTH", 0xFF5C6370);
     }
 
-    draw_button(synth->gui.pixels, 370, 12, 85, 28, is_ru ? "MEM RU" : "ENG", true);
-    draw_button(synth->gui.pixels, 470, 12, 145, 28, is_ru ? "Осциляторы" : "1. OSC & CORE", synth->gui.current_tab == TAB_OSC);
+    draw_button(synth->gui.pixels, 370, 12, 85, 28, is_ru ? "Пацанский" : "ENG", true);
+    draw_button(synth->gui.pixels, 470, 12, 145, 28, is_ru ? "Генераторы" : "1. OSC & CORE", synth->gui.current_tab == TAB_OSC);
     draw_button(synth->gui.pixels, 630, 12, 155, 28, is_ru ? "Спецэффекты" : "2. FX RACK", synth->gui.current_tab == TAB_FX);
 
     if (synth->gui.current_tab == TAB_OSC) {
@@ -219,6 +219,12 @@ void gui_render_frame(GranularSynth *synth) {
     CGImageRelease(image);
     CGDataProviderRelease(provider);
     CGColorSpaceRelease(color_space);
+#elif defined(_WIN32)
+    HWND hwnd = (HWND)synth->gui.native_view;
+    if (hwnd) {
+        InvalidateRect(hwnd, NULL, FALSE);
+        UpdateWindow(hwnd);
+    }
 #endif
 }
 
@@ -326,6 +332,57 @@ static void mac_mouse_up(id self, SEL _cmd, id event) {
     GranularSynth *synth = (GranularSynth *)objc_getAssociatedObject(self, "synth");
     if (synth) gui_handle_mouse_up(synth);
 }
+#elif defined(_WIN32)
+static LRESULT CALLBACK win32_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+    GranularSynth *synth = (GranularSynth *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    switch (msg) {
+        case WM_ERASEBKGND:
+            return 1;
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+            if (synth) {
+                BITMAPINFO bmi;
+                memset(&bmi, 0, sizeof(bmi));
+                bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+                bmi.bmiHeader.biWidth = FB_WIDTH;
+                bmi.bmiHeader.biHeight = -FB_HEIGHT;
+                bmi.bmiHeader.biPlanes = 1;
+                bmi.bmiHeader.biBitCount = 32;
+                bmi.bmiHeader.biCompression = BI_RGB;
+
+                RECT rc;
+                GetClientRect(hwnd, &rc);
+                StretchDIBits(hdc, 0, 0, rc.right - rc.left, rc.bottom - rc.top,
+                              0, 0, FB_WIDTH, FB_HEIGHT,
+                              synth->gui.pixels, &bmi, DIB_RGB_COLORS, SRCCOPY);
+            }
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
+        case WM_LBUTTONDOWN: {
+            SetCapture(hwnd);
+            float x = (float)(short)LOWORD(lp);
+            float y = (float)(short)HIWORD(lp);
+            if (synth) gui_handle_mouse_down(synth, x, y);
+            return 0;
+        }
+        case WM_MOUSEMOVE: {
+            if (wp & MK_LBUTTON) {
+                float x = (float)(short)LOWORD(lp);
+                float y = (float)(short)HIWORD(lp);
+                if (synth) gui_handle_mouse_drag(synth, x, y);
+            }
+            return 0;
+        }
+        case WM_LBUTTONUP: {
+            ReleaseCapture();
+            if (synth) gui_handle_mouse_up(synth);
+            return 0;
+        }
+    }
+    return DefWindowProc(hwnd, msg, wp, lp);
+}
 #endif
 
 static bool gui_is_api_supported(const clap_plugin_t *p, const char *api, bool fl) {
@@ -406,9 +463,33 @@ static bool gui_set_parent(const clap_plugin_t *plugin, const clap_window_t *win
     gui_render_frame(synth);
     return true;
 #elif defined(_WIN32)
-    synth->gui.parent_window = window->win32;
-    synth->gui.native_view = window->win32;
+    HWND parent = (HWND)window->win32;
+    if (!parent) return false;
+
+    static bool class_registered = false;
+    if (!class_registered) {
+        WNDCLASSEX wc;
+        memset(&wc, 0, sizeof(wc));
+        wc.cbSize = sizeof(WNDCLASSEX);
+        wc.lpfnWndProc = win32_wnd_proc;
+        wc.hInstance = GetModuleHandle(NULL);
+        wc.lpszClassName = "LukyanSynthWin32View";
+        wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+        RegisterClassEx(&wc);
+        class_registered = true;
+    }
+
+    HWND child = CreateWindowEx(0, "LukyanSynthWin32View", "",
+                                WS_CHILD | WS_VISIBLE, 0, 0, GUI_WIDTH, GUI_HEIGHT,
+                                parent, NULL, GetModuleHandle(NULL), NULL);
+    if (!child) return false;
+
+    SetWindowLongPtr(child, GWLP_USERDATA, (LONG_PTR)synth);
+    synth->gui.native_view = (void *)child;
+    synth->gui.parent_window = (void *)parent;
     synth->gui.is_open = true;
+
+    gui_render_frame(synth);
     return true;
 #else
     return false;
