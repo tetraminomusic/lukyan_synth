@@ -20,17 +20,9 @@ void gui_init(GuiState *gui) {
     gui->parent_window = NULL;
     gui->is_open = false;
 
-    // Распаковываем запеченную фотку из памяти на чистом Си
     int img_w = 0, img_h = 0, channels = 0;
-    
-    // Подходит и для photo_png, и для photo_jpg (xxd сам называет массив по имени файла)
-#if defined(photo_png) || defined(photo_png_len)
-    unsigned char *data = stbi_load_from_memory(photo_png, photo_png_len, &img_w, &img_h, &channels, 4);
-#elif defined(photo_jpg) || defined(photo_jpg_len)
-    unsigned char *data = stbi_load_from_memory(photo_jpg, photo_jpg_len, &img_w, &img_h, &channels, 4);
-#else
-    unsigned char *data = NULL;
-#endif
+    unsigned char *data = stbi_load_from_memory(steve_png, steve_png_len, &img_w, &img_h, &channels, 4);
+    (void)channels;
 
     if (data && img_w > 0 && img_h > 0) {
         for (int y = 0; y < GUI_HEIGHT; ++y) {
@@ -44,17 +36,15 @@ void gui_init(GuiState *gui) {
                 uint8_t b = data[idx + 2];
                 uint8_t a = data[idx + 3];
 
-                // Накладываем легкое затемнение (на 30%), чтобы ручки и текст в будущем хорошо читались поверх фото
-                r = (uint8_t)(r * 0.70f);
-                g = (uint8_t)(g * 0.70f);
-                b = (uint8_t)(b * 0.70f);
+                r = (uint8_t)(r * 0.80f);
+                g = (uint8_t)(g * 0.80f);
+                b = (uint8_t)(b * 0.80f);
 
                 gui->pixels[y * GUI_WIDTH + x] = (a << 24) | (r << 16) | (g << 8) | b;
             }
         }
         stbi_image_free(data);
     } else {
-        // Запасной темный фон, если картинки нет
         for (int y = 0; y < GUI_HEIGHT; ++y) {
             for (int x = 0; x < GUI_WIDTH; ++x) {
                 gui->pixels[y * GUI_WIDTH + x] = (0xFF << 24) | (22 << 16) | (22 << 8) | 26;
