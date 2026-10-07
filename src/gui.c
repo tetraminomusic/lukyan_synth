@@ -403,4 +403,7 @@ const clap_plugin_gui_t g_gui_extension = {
     .adjust_size = gui_adjust_size,
     .set_size = gui_set_size,
     .set_parent = gui_set_parent,
-    .set_transient = gui_set_transie
+    .suggest_title = gui_suggest_title,
+    .show = gui_show,
+    .hide = gui_hide,
+};
