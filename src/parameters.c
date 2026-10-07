@@ -17,6 +17,7 @@ typedef struct {
 } ParamDef;
 
 static void fmt_ms(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.1f ms", val); }
+static void fmt_hz(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.0f Hz", val); }
 static void fmt_gr_s(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.1f gr/s", val); }
 static void fmt_norm(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.2f", val); }
 static void fmt_pct(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.0f %%", val * 100.0); }
@@ -41,19 +42,22 @@ static void app_attack(GranularEngine *e, double v) { granular_set_attack(e, (fl
 static void app_decay(GranularEngine *e, double v) { granular_set_decay(e, (float)v); }
 static void app_sustain(GranularEngine *e, double v) { granular_set_sustain(e, (float)v); }
 static void app_release(GranularEngine *e, double v) { granular_set_release(e, (float)v); }
-static void app_gain(GranularEngine *e, double v) { granular_set_gain(e, (float)v); }
-static void app_crush(GranularEngine *e, double v) { granular_set_crush(e, (float)v); }
-static void app_downsample(GranularEngine *e, double v) { granular_set_downsample(e, (float)v); }
-static void app_tone(GranularEngine *e, double v) { granular_set_tone(e, (float)v); }
+static void app_gain(GranularEngine *e, double v) { e->fx_params.gain = (float)v; }
+static void app_crush(GranularEngine *e, double v) { e->fx_params.crush_bits = (float)v; }
+static void app_downsample(GranularEngine *e, double v) { e->fx_params.downsample = (float)v; }
+
+static void app_cutoff(GranularEngine *e, double v) { e->fx_params.cutoff_hz = (float)v; }
+static void app_resonance(GranularEngine *e, double v) { e->fx_params.resonance = (float)v; }
+static void app_chorus_mix(GranularEngine *e, double v) { e->fx_params.chorus_mix = (float)v; }
+static void app_chorus_rate(GranularEngine *e, double v) { e->fx_params.chorus_rate_hz = (float)v; }
+static void app_chorus_depth(GranularEngine *e, double v) { e->fx_params.chorus_depth_ms = (float)v; }
 
 static void app_osc1_gain(GranularEngine *e, double v) { granular_set_osc_gain(e, 0, (float)v); }
 static void app_osc1_semi(GranularEngine *e, double v) { granular_set_osc_semi(e, 0, (float)v); }
 static void app_osc1_morph(GranularEngine *e, double v) { granular_set_osc_morph(e, 0, (float)v); }
-
 static void app_osc2_gain(GranularEngine *e, double v) { granular_set_osc_gain(e, 1, (float)v); }
 static void app_osc2_semi(GranularEngine *e, double v) { granular_set_osc_semi(e, 1, (float)v); }
 static void app_osc2_morph(GranularEngine *e, double v) { granular_set_osc_morph(e, 1, (float)v); }
-
 static void app_osc3_gain(GranularEngine *e, double v) { granular_set_osc_gain(e, 2, (float)v); }
 static void app_osc3_semi(GranularEngine *e, double v) { granular_set_osc_semi(e, 2, (float)v); }
 static void app_osc3_morph(GranularEngine *e, double v) { granular_set_osc_morph(e, 2, (float)v); }
@@ -67,9 +71,16 @@ static const ParamDef DEFS[PARAM_COUNT] = {
     { PARAM_SUSTAIN, "Sustain", 0.0, 1.0, 0.75, CLAP_PARAM_IS_AUTOMATABLE, fmt_norm, app_sustain },
     { PARAM_RELEASE, "Release", 10.0, 3000.0, 350.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_ms, app_release },
     { PARAM_GAIN, "Master Gain", 0.0, 1.0, 0.75, CLAP_PARAM_IS_AUTOMATABLE, fmt_pct, app_gain },
+    
     { PARAM_CRUSH, "Lo-Fi Bits", 4.0, 16.0, 16.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_bits, app_crush },
     { PARAM_DOWNSAMPLE, "Lo-Fi Rate", 1.0, 24.0, 1.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_rate, app_downsample },
-    { PARAM_TONE, "Tone (Hi-Fi)", 0.0, 1.0, 0.50, CLAP_PARAM_IS_AUTOMATABLE, fmt_pct, app_tone },
+    
+    { PARAM_CUTOFF, "Filter Cutoff", 20.0, 20000.0, 20000.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_hz, app_cutoff },
+    { PARAM_RESONANCE, "Filter Res", 0.1, 10.0, 0.707, CLAP_PARAM_IS_AUTOMATABLE, fmt_norm, app_resonance },
+    { PARAM_CHORUS_MIX, "Chorus Mix", 0.0, 1.0, 0.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_pct, app_chorus_mix },
+    { PARAM_CHORUS_RATE, "Chorus Rate", 0.1, 5.0, 1.2, CLAP_PARAM_IS_AUTOMATABLE, fmt_hz, app_chorus_rate },
+    { PARAM_CHORUS_DEPTH, "Chorus Depth", 0.0, 20.0, 5.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_ms, app_chorus_depth },
+
     { PARAM_OSC1_GAIN, "Osc 1 Gain", 0.0, 1.0, 0.80, CLAP_PARAM_IS_AUTOMATABLE, fmt_pct, app_osc1_gain },
     { PARAM_OSC1_SEMI, "Osc 1 Semi", -24.0, 24.0, 0.0, CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED, fmt_semi, app_osc1_semi },
     { PARAM_OSC1_MORPH, "Osc 1 Morph", 0.0, 3.0, 0.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_morph, app_osc1_morph },
@@ -81,13 +92,10 @@ static const ParamDef DEFS[PARAM_COUNT] = {
     { PARAM_OSC3_MORPH, "Osc 3 Morph", 0.0, 3.0, 2.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_morph, app_osc3_morph },
 };
 
-uint32_t params_get_count(void) {
-    return PARAM_COUNT;
-}
+uint32_t params_get_count(void) { return PARAM_COUNT; }
 
 bool params_get_info(uint32_t index, clap_param_info_t *info) {
     if (!info || index >= PARAM_COUNT) return false;
-
     memset(info, 0, sizeof(*info));
     info->id = DEFS[index].id;
     info->flags = DEFS[index].flags;
@@ -95,7 +103,6 @@ bool params_get_info(uint32_t index, clap_param_info_t *info) {
     info->min_value = DEFS[index].min_val;
     info->max_value = DEFS[index].max_val;
     info->default_value = DEFS[index].def_val;
-
     return true;
 }
 
@@ -134,9 +141,7 @@ bool params_state_load(GranularSynth *synth, const clap_istream_t *stream) {
     double loaded[PARAM_COUNT];
     int64_t read = stream->read(stream, loaded, sizeof(loaded));
     if (read == sizeof(loaded)) {
-        for (int i = 0; i < PARAM_COUNT; ++i) {
-            params_apply_value(synth, i, loaded[i]);
-        }
+        for (int i = 0; i < PARAM_COUNT; ++i) params_apply_value(synth, i, loaded[i]);
         return true;
     }
     return false;
