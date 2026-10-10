@@ -31,4 +31,14 @@ if(APPLE)
         BUNDLE TRUE
         BUNDLE_EXTENSION "clap"
     )
+
+    add_custom_command(TARGET granular_synth POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$ENV{HOME}/Library/Audio/Plug-Ins/CLAP"
+        
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "$<TARGET_BUNDLE_DIR:granular_synth>"
+            "$ENV{HOME}/Library/Audio/Plug-Ins/CLAP/granular_synth.clap"
+            
+        COMMENT "Успешно: Плагин скопирован в ~/Library/Audio/Plug-Ins/CLAP/"
+    )
 endif()
