@@ -52,22 +52,26 @@ static clap_process_status plugin_process(const struct clap_plugin *plugin,
                                           const clap_process_t *process) {
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
 
+    if (process->audio_outputs_count == 0) {
+        return CLAP_PROCESS_CONTINUE;
+    }
+
     const uint32_t frame_count = process->frames_count;
     const uint32_t out_channels = process->audio_outputs[0].channel_count;
 
-    float *out_l = process->audio_outputs[0].data32[0];
+    float *out_l = (out_channels > 0) ? process->audio_outputs[0].data32[0] : NULL;
     float *out_r = (out_channels > 1) ? process->audio_outputs[0].data32[1] : NULL;
 
-    const float freq = 440.0f; // Note A
-    const float phase_inc = freq / synth->sample_rate;
+    const float freq = 440.0f; 
+    const float phase_inc = (synth->sample_rate > 0.0) ? (freq / synth->sample_rate) : 0.0f;
 
     for (uint32_t i = 0; i < frame_count; ++i) {
-        float sample = sinf(synth->phase * 2.0f * PI) * 0.2f; // about -14db
+        float sample = sinf(synth->phase * 2.0f * PI) * 0.1f; 
         
         synth->phase += phase_inc;
         if (synth->phase >= 1.0f) synth->phase -= 1.0f;
 
-        out_l[i] = sample;
+        if (out_l) out_l[i] = sample;
         if (out_r) out_r[i] = sample;
     }
 
