@@ -1,4 +1,4 @@
-cmake_minimun_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.20)
 project(GranularSynth LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
@@ -27,5 +27,8 @@ set_target_properties(granular_synth PROPERTIES
 )
 
 if(APPLE)
-    set_target_properties(granular_synth PROPERTIES BUNDLE TRUE)
+    set_target_properties(granular_synth PROPERTIES 
+        BUNDLE TRUE
+        BUNDLE_EXTENSION "clap"`
+    )
 endif()
