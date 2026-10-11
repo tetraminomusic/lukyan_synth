@@ -22,6 +22,7 @@ target_link_libraries(granular_synth PRIVATE clap)
 target_include_directories(granular_synth PRIVATE src)
 
 set_target_properties(granular_synth PROPERTIES
+    OUTPUT_NAME "Lukyan Synth"
     PREFIX ""
     SUFFIX ".clap"
 )
@@ -34,11 +35,9 @@ if(APPLE)
 
     add_custom_command(TARGET granular_synth POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "$ENV{HOME}/Library/Audio/Plug-Ins/CLAP"
-        
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "$<TARGET_BUNDLE_DIR:granular_synth>"
-            "$ENV{HOME}/Library/Audio/Plug-Ins/CLAP/granular_synth.clap"
-            
-        COMMENT "Успешно: Плагин скопирован в ~/Library/Audio/Plug-Ins/CLAP/"
+            "$ENV{HOME}/Library/Audio/Plug-Ins/CLAP/Lukyan Synth.clap"
+        COMMENT "Плагин скопирован как Lukyan Synth.clap"
     )
 endif()
