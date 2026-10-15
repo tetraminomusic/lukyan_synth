@@ -1,5 +1,6 @@
 #include <clap/clap.h>
 #include <clap/ext/audio-ports.h>
+#include <clap/ext/note-ports.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -12,6 +13,10 @@ typedef struct {
 
     double sample_rate;
     float phase;
+
+    float frequency;
+    bool is_note_on;
+    int32_t current_key;
 } GranularSynth;
 
 static uint32_t plugin_audio_ports_count(const clap_plugin_t *plugin, bool is_input) {
@@ -40,6 +45,30 @@ static const clap_plugin_audio_ports_t audio_ports = {
     .get = plugin_audio_ports_get,
 };
 
+static uint32_t plugin_note_ports_count(const clap_plugin_t *plugin, bool is_input) {
+    (void)plugin;
+    return is_input ? 1 : 0;
+}
+
+static bool plugin_note_ports_get(const clap_plugin_t *plugin,
+                                  uint32_t index,
+                                  bool is_input,
+                                  clap_note_port_info_t *info) {
+    (void)plugin;
+    if (!is_input || index > 0) return false;
+
+    info->id = 0;
+    strncpy(info->name, "Note Input", sizeof(info->name));
+    info->supported_dialects = CLAP_NOTE_DIALECT_CLAP | CLAP_NOTE_DIALECT_MIDI;
+    info->preferred_dialect = CLAP_NOTE_DIALECT_CLAP;
+    return true;
+}
+
+static const clap_plugin_note_ports_t note_ports = {
+    .count = plugin_note_ports_count,
+    .get = plugin_note_ports_get,
+};
+
 static bool plugin_init(const struct clap_plugin *plugin) {
     (void)plugin;
     return true; 
@@ -61,6 +90,9 @@ static bool plugin_activate(const struct clap_plugin *plugin,
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
     synth->sample_rate = sample_rate;
     synth->phase = 0.0f;
+    synth->frequency = 440.0f;
+    synth->is_note_on = false;
+    synth->current_key = -1;
     return true;
 }
 
@@ -80,11 +112,38 @@ static void plugin_stop_processing(const struct clap_plugin *plugin) {
 static void plugin_reset(const struct clap_plugin *plugin) {
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
     synth->phase = 0.0f;
+    synth->is_note_on = false;
+    synth->current_key = -1;
+}
+
+static void process_input_events(GranularSynth *synth, const clap_input_events_t *in_events) {
+    if (!in_events) return;
+
+    const uint32_t event_count = in_events->size(in_events);
+    for (uint32_t i = 0; i < event_count; ++i) {
+        const clap_event_header_t *hdr = in_events->get(in_events, i);
+        if (hdr->space_id != CLAP_CORE_EVENT_SPACE_ID) continue;
+
+        if (hdr->type == CLAP_EVENT_NOTE_ON) {
+            const clap_event_note_t *note = (const clap_event_note_t *)hdr;
+            synth->current_key = note->key;
+            synth->frequency = 440.0f * powf(2.0f, (float)(note->key - 69) / 12.0f);
+            synth->is_note_on = true;
+        } else if (hdr->type == CLAP_EVENT_NOTE_OFF) {
+            const clap_event_note_t *note = (const clap_event_note_t *)hdr;
+            if (synth->current_key == note->key) {
+                synth->is_note_on = false;
+                synth->current_key = -1;
+            }
+        }
+    }
 }
 
 static clap_process_status plugin_process(const struct clap_plugin *plugin,
                                           const clap_process_t *process) {
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
+
+    process_input_events(synth, process->in_events);
 
     if (process->audio_outputs_count == 0) {
         return CLAP_PROCESS_CONTINUE;
@@ -96,14 +155,18 @@ static clap_process_status plugin_process(const struct clap_plugin *plugin,
     float *out_l = (out_channels > 0) ? process->audio_outputs[0].data32[0] : NULL;
     float *out_r = (out_channels > 1) ? process->audio_outputs[0].data32[1] : NULL;
 
-    const float freq = 440.0f; 
-    const float phase_inc = (synth->sample_rate > 0.0) ? (freq / synth->sample_rate) : 0.0f;
+    const float phase_inc = (synth->sample_rate > 0.0) ? (synth->frequency / synth->sample_rate) : 0.0f;
 
     for (uint32_t i = 0; i < frame_count; ++i) {
-        float sample = sinf(synth->phase * 2.0f * PI) * 0.1f; 
-        
-        synth->phase += phase_inc;
-        if (synth->phase >= 1.0f) synth->phase -= 1.0f;
+        float sample = 0.0f;
+
+        if (synth->is_note_on) {
+            sample = sinf(synth->phase * 2.0f * PI) * 0.1f;
+            synth->phase += phase_inc;
+            if (synth->phase >= 1.0f) {
+                synth->phase -= 1.0f;
+            }
+        }
 
         if (out_l) out_l[i] = sample;
         if (out_r) out_r[i] = sample;
@@ -116,6 +179,9 @@ static const void* plugin_get_extension(const struct clap_plugin *plugin, const 
     (void)plugin;
     if (strcmp(id, CLAP_EXT_AUDIO_PORTS) == 0) {
         return &audio_ports;
+    }
+    if (strcmp(id, CLAP_EXT_NOTE_PORTS) == 0) {
+        return &note_ports;
     }
     return NULL;
 }
