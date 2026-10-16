@@ -11,7 +11,6 @@ typedef struct {
     clap_plugin_t plugin; 
     const clap_host_t* host;
 
-    int32_t current_key;
     GranularEngine engine;
 } GranularSynth;
 
@@ -84,7 +83,6 @@ static bool plugin_activate(const struct clap_plugin *plugin,
     (void)min_frames_count;
     (void)max_frames_count;
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
-    synth->current_key = -1;
     granular_init(&synth->engine, sample_rate);
     return true;
 }
@@ -104,7 +102,6 @@ static void plugin_stop_processing(const struct clap_plugin *plugin) {
 
 static void plugin_reset(const struct clap_plugin *plugin) {
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
-    synth->current_key = -1;
     granular_reset(&synth->engine);
 }
 
@@ -118,16 +115,11 @@ static void process_input_events(GranularSynth *synth, const clap_input_events_t
 
         if (hdr->type == CLAP_EVENT_NOTE_ON) {
             const clap_event_note_t *note = (const clap_event_note_t *)hdr;
-            synth->current_key = note->key;
             float freq = 440.0f * powf(2.0f, (float)(note->key - 69) / 12.0f);
-            granular_set_frequency(&synth->engine, freq);
-            granular_set_gate(&synth->engine, true);
+            granular_note_on(&synth->engine, note->key, freq);
         } else if (hdr->type == CLAP_EVENT_NOTE_OFF) {
             const clap_event_note_t *note = (const clap_event_note_t *)hdr;
-            if (synth->current_key == note->key) {
-                synth->current_key = -1;
-                granular_set_gate(&synth->engine, false);
-            }
+            granular_note_off(&synth->engine, note->key);
         }
     }
 }
@@ -149,10 +141,13 @@ static clap_process_status plugin_process(const struct clap_plugin *plugin,
     float *out_r = (out_channels > 1) ? process->audio_outputs[0].data32[1] : NULL;
 
     for (uint32_t i = 0; i < frame_count; ++i) {
-        float sample = granular_render_sample(&synth->engine);
+        float sample_l = 0.0f;
+        float sample_r = 0.0f;
 
-        if (out_l) out_l[i] = sample;
-        if (out_r) out_r[i] = sample;
+        granular_render_sample(&synth->engine, &sample_l, &sample_r);
+
+        if (out_l) out_l[i] = sample_l;
+        if (out_r) out_r[i] = sample_r;
     }
 
     return CLAP_PROCESS_CONTINUE;
