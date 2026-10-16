@@ -5,33 +5,14 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define PI 3.14159265358979323846
-#define MAX_GRAINS 64
-#define HANN_LUT_SIZE 2048
-#define SAMPLE_BUFFER_SIZE 96000
-
-typedef struct {
-    bool active;
-    float pos;
-    float speed;
-    float length;
-    float progress;
-} Grain;
+#include "granular.h"
 
 typedef struct {
     clap_plugin_t plugin; 
     const clap_host_t* host;
 
-    double sample_rate;
-    float frequency;
-    bool is_note_on;
     int32_t current_key;
-
-    float sample_buffer[SAMPLE_BUFFER_SIZE];
-    float hann_lut[HANN_LUT_SIZE];
-    Grain grains[MAX_GRAINS];
-
-    float spawn_timer;
+    GranularEngine engine;
 } GranularSynth;
 
 static uint32_t plugin_audio_ports_count(const clap_plugin_t *plugin, bool is_input) {
@@ -96,22 +77,6 @@ static void plugin_destroy(const struct clap_plugin *plugin) {
     }
 }
 
-static void init_hann_lut(GranularSynth *synth) {
-    for (int i = 0; i < HANN_LUT_SIZE; ++i) {
-        synth->hann_lut[i] = 0.5f * (1.0f - cosf((2.0f * (float)PI * (float)i) / (float)(HANN_LUT_SIZE - 1)));
-    }
-}
-
-static void init_sample_buffer(GranularSynth *synth) {
-    for (int i = 0; i < SAMPLE_BUFFER_SIZE; ++i) {
-        float t = (float)i / (float)SAMPLE_BUFFER_SIZE;
-        float wave = sinf(2.0f * (float)PI * 220.0f * t) * 0.5f
-                   + sinf(2.0f * (float)PI * 440.0f * t) * 0.25f
-                   + sinf(2.0f * (float)PI * 880.0f * t) * 0.125f;
-        synth->sample_buffer[i] = wave;
-    }
-}
-
 static bool plugin_activate(const struct clap_plugin *plugin,
                             double sample_rate,
                             uint32_t min_frames_count,
@@ -119,19 +84,8 @@ static bool plugin_activate(const struct clap_plugin *plugin,
     (void)min_frames_count;
     (void)max_frames_count;
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
-    synth->sample_rate = sample_rate;
-    synth->frequency = 440.0f;
-    synth->is_note_on = false;
     synth->current_key = -1;
-    synth->spawn_timer = 0.0f;
-
-    init_hann_lut(synth);
-    init_sample_buffer(synth);
-
-    for (int i = 0; i < MAX_GRAINS; ++i) {
-        synth->grains[i].active = false;
-    }
-
+    granular_init(&synth->engine, sample_rate);
     return true;
 }
 
@@ -150,25 +104,8 @@ static void plugin_stop_processing(const struct clap_plugin *plugin) {
 
 static void plugin_reset(const struct clap_plugin *plugin) {
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
-    synth->is_note_on = false;
     synth->current_key = -1;
-    synth->spawn_timer = 0.0f;
-    for (int i = 0; i < MAX_GRAINS; ++i) {
-        synth->grains[i].active = false;
-    }
-}
-
-static void spawn_grain(GranularSynth *synth) {
-    for (int i = 0; i < MAX_GRAINS; ++i) {
-        if (!synth->grains[i].active) {
-            synth->grains[i].active = true;
-            synth->grains[i].pos = (float)(rand() % (SAMPLE_BUFFER_SIZE / 2));
-            synth->grains[i].speed = synth->frequency / 220.0f;
-            synth->grains[i].length = (float)synth->sample_rate * 0.08f;
-            synth->grains[i].progress = 0.0f;
-            break;
-        }
-    }
+    granular_reset(&synth->engine);
 }
 
 static void process_input_events(GranularSynth *synth, const clap_input_events_t *in_events) {
@@ -182,13 +119,14 @@ static void process_input_events(GranularSynth *synth, const clap_input_events_t
         if (hdr->type == CLAP_EVENT_NOTE_ON) {
             const clap_event_note_t *note = (const clap_event_note_t *)hdr;
             synth->current_key = note->key;
-            synth->frequency = 440.0f * powf(2.0f, (float)(note->key - 69) / 12.0f);
-            synth->is_note_on = true;
+            float freq = 440.0f * powf(2.0f, (float)(note->key - 69) / 12.0f);
+            granular_set_frequency(&synth->engine, freq);
+            granular_set_gate(&synth->engine, true);
         } else if (hdr->type == CLAP_EVENT_NOTE_OFF) {
             const clap_event_note_t *note = (const clap_event_note_t *)hdr;
             if (synth->current_key == note->key) {
-                synth->is_note_on = false;
                 synth->current_key = -1;
+                granular_set_gate(&synth->engine, false);
             }
         }
     }
@@ -210,49 +148,11 @@ static clap_process_status plugin_process(const struct clap_plugin *plugin,
     float *out_l = (out_channels > 0) ? process->audio_outputs[0].data32[0] : NULL;
     float *out_r = (out_channels > 1) ? process->audio_outputs[0].data32[1] : NULL;
 
-    const float spawn_interval = (synth->sample_rate > 0.0) ? ((float)synth->sample_rate / 40.0f) : 1000.0f;
-
     for (uint32_t i = 0; i < frame_count; ++i) {
-        if (synth->is_note_on) {
-            synth->spawn_timer += 1.0f;
-            if (synth->spawn_timer >= spawn_interval) {
-                synth->spawn_timer = 0.0f;
-                spawn_grain(synth);
-            }
-        }
+        float sample = granular_render_sample(&synth->engine);
 
-        float mixed_sample = 0.0f;
-
-        for (int g = 0; g < MAX_GRAINS; ++g) {
-            if (!synth->grains[g].active) continue;
-
-            Grain *grain = &synth->grains[g];
-
-            float win_norm = grain->progress / grain->length;
-            int lut_idx = (int)(win_norm * (float)(HANN_LUT_SIZE - 1));
-            if (lut_idx >= HANN_LUT_SIZE) lut_idx = HANN_LUT_SIZE - 1;
-            float env = synth->hann_lut[lut_idx];
-
-            int idx_a = (int)grain->pos;
-            int idx_b = (idx_a + 1) % SAMPLE_BUFFER_SIZE;
-            float frac = grain->pos - (float)idx_a;
-            float audio_val = synth->sample_buffer[idx_a] * (1.0f - frac) + synth->sample_buffer[idx_b] * frac;
-
-            mixed_sample += audio_val * env * 0.15f;
-
-            grain->pos += grain->speed;
-            if (grain->pos >= (float)SAMPLE_BUFFER_SIZE) {
-                grain->pos -= (float)SAMPLE_BUFFER_SIZE;
-            }
-
-            grain->progress += 1.0f;
-            if (grain->progress >= grain->length) {
-                grain->active = false;
-            }
-        }
-
-        if (out_l) out_l[i] = mixed_sample;
-        if (out_r) out_r[i] = mixed_sample;
+        if (out_l) out_l[i] = sample;
+        if (out_r) out_r[i] = sample;
     }
 
     return CLAP_PROCESS_CONTINUE;
