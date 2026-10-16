@@ -24,6 +24,7 @@ static void init_sample_buffer(GranularEngine *engine) {
 void granular_init(GranularEngine *engine, double sample_rate) {
     engine->sample_rate = sample_rate;
     engine->playhead = 0.0f;
+    engine->next_voice_rr = 0;
 
     init_hann_lut(engine);
     init_sample_buffer(engine);
@@ -51,7 +52,8 @@ void granular_note_on(GranularEngine *engine, int32_t key, float frequency) {
     }
 
     if (target_idx == -1) {
-        target_idx = 0;
+        target_idx = engine->next_voice_rr;
+        engine->next_voice_rr = (engine->next_voice_rr + 1) % MAX_VOICES;
     }
 
     engine->voices[target_idx].active = true;
@@ -79,6 +81,7 @@ void granular_reset(GranularEngine *engine) {
         engine->grains[i].active = false;
     }
     engine->playhead = 0.0f;
+    engine->next_voice_rr = 0;
 }
 
 static void spawn_grain(GranularEngine *engine, float frequency) {
@@ -137,7 +140,7 @@ void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) 
         float frac = grain->pos - (float)idx_a;
         float audio_val = engine->sample_buffer[idx_a] * (1.0f - frac) + engine->sample_buffer[idx_b] * frac;
 
-        float grain_amp = audio_val * env * 0.08f;
+        float grain_amp = audio_val * env * 0.045f;
         mixed_l += grain_amp * (1.0f - grain->pan);
         mixed_r += grain_amp * grain->pan;
 
