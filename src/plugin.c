@@ -1,15 +1,28 @@
 #include <clap/clap.h>
 #include <clap/ext/audio-ports.h>
 #include <clap/ext/note-ports.h>
+#include <clap/ext/params.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
 
 #include "granular.h"
 
+enum {
+    PARAM_GRAIN_SIZE = 0,
+    PARAM_DENSITY = 1,
+    PARAM_SPRAY = 2,
+    PARAM_COUNT = 3
+};
+
 typedef struct {
     clap_plugin_t plugin; 
     const clap_host_t* host;
+
+    double grain_size;
+    double density;
+    double spray;
 
     GranularEngine engine;
 } GranularSynth;
@@ -24,7 +37,9 @@ static bool plugin_audio_ports_get(const clap_plugin_t *plugin,
                                    bool is_input,
                                    clap_audio_port_info_t *info) {
     (void)plugin;
-    if (is_input || index > 0) return false;
+    if (!info || is_input || index > 0) return false;
+
+    memset(info, 0, sizeof(*info));
 
     info->id = 0;
     strncpy(info->name, "Main Output", sizeof(info->name));
@@ -50,7 +65,9 @@ static bool plugin_note_ports_get(const clap_plugin_t *plugin,
                                   bool is_input,
                                   clap_note_port_info_t *info) {
     (void)plugin;
-    if (!is_input || index > 0) return false;
+    if (!info || !is_input || index > 0) return false;
+
+    memset(info, 0, sizeof(*info));
 
     info->id = 0;
     strncpy(info->name, "Note Input", sizeof(info->name));
@@ -64,12 +81,135 @@ static const clap_plugin_note_ports_t note_ports = {
     .get = plugin_note_ports_get,
 };
 
+static uint32_t plugin_params_count(const clap_plugin_t *plugin) {
+    (void)plugin;
+    return PARAM_COUNT;
+}
+
+static bool plugin_params_get_info(const clap_plugin_t *plugin, uint32_t index, clap_param_info_t *info) {
+    (void)plugin;
+    if (!info) return false;
+
+    memset(info, 0, sizeof(*info));
+
+    switch (index) {
+        case PARAM_GRAIN_SIZE:
+            info->id = PARAM_GRAIN_SIZE;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            info->cookie = NULL;
+            strncpy(info->name, "Grain Size", sizeof(info->name));
+            info->min_value = 10.0;
+            info->max_value = 200.0;
+            info->default_value = 80.0;
+            return true;
+
+        case PARAM_DENSITY:
+            info->id = PARAM_DENSITY;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            info->cookie = NULL;
+            strncpy(info->name, "Density", sizeof(info->name));
+            info->min_value = 5.0;
+            info->max_value = 100.0;
+            info->default_value = 35.0;
+            return true;
+
+        case PARAM_SPRAY:
+            info->id = PARAM_SPRAY;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            info->cookie = NULL;
+            strncpy(info->name, "Spray", sizeof(info->name));
+            info->min_value = 0.0;
+            info->max_value = 1.0;
+            info->default_value = 0.25;
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+static bool plugin_params_get_value(const clap_plugin_t *plugin, clap_id param_id, double *out_value) {
+    if (!plugin || !plugin->plugin_data || !out_value) return false;
+    GranularSynth *synth = (GranularSynth *)plugin->plugin_data;
+
+    switch (param_id) {
+        case PARAM_GRAIN_SIZE: *out_value = synth->grain_size; return true;
+        case PARAM_DENSITY:    *out_value = synth->density; return true;
+        case PARAM_SPRAY:      *out_value = synth->spray; return true;
+        default: return false;
+    }
+}
+
+static bool plugin_params_value_to_text(const clap_plugin_t *plugin, clap_id param_id, double value, char *out_buffer, uint32_t out_buffer_capacity) {
+    (void)plugin;
+    if (!out_buffer || out_buffer_capacity == 0) return false;
+
+    switch (param_id) {
+        case PARAM_GRAIN_SIZE:
+            snprintf(out_buffer, out_buffer_capacity, "%.1f ms", value);
+            return true;
+        case PARAM_DENSITY:
+            snprintf(out_buffer, out_buffer_capacity, "%.1f gr/s", value);
+            return true;
+        case PARAM_SPRAY:
+            snprintf(out_buffer, out_buffer_capacity, "%.2f", value);
+            return true;
+        default:
+            return false;
+    }
+}
+
+static bool plugin_params_text_to_value(const clap_plugin_t *plugin, clap_id param_id, const char *param_value_text, double *out_value) {
+    (void)plugin; (void)param_id; (void)param_value_text; (void)out_value;
+    return false;
+}
+
+static void plugin_params_flush(const clap_plugin_t *plugin, const clap_input_events_t *in, const clap_output_events_t *out) {
+    (void)out;
+    if (!plugin || !plugin->plugin_data || !in) return;
+    GranularSynth *synth = (GranularSynth *)plugin->plugin_data;
+
+    uint32_t size = in->size(in);
+    for (uint32_t i = 0; i < size; ++i) {
+        const clap_event_header_t *hdr = in->get(in, i);
+        if (!hdr || hdr->space_id != CLAP_CORE_EVENT_SPACE_ID) continue;
+
+        if (hdr->type == CLAP_EVENT_PARAM_VALUE) {
+            const clap_event_param_value_t *ev = (const clap_event_param_value_t *)hdr;
+            switch (ev->param_id) {
+                case PARAM_GRAIN_SIZE:
+                    synth->grain_size = ev->value;
+                    granular_set_grain_size(&synth->engine, (float)ev->value);
+                    break;
+                case PARAM_DENSITY:
+                    synth->density = ev->value;
+                    granular_set_density(&synth->engine, (float)ev->value);
+                    break;
+                case PARAM_SPRAY:
+                    synth->spray = ev->value;
+                    granular_set_spray(&synth->engine, (float)ev->value);
+                    break;
+            }
+        }
+    }
+}
+
+static const clap_plugin_params_t params_ext = {
+    .count = plugin_params_count,
+    .get_info = plugin_params_get_info,
+    .get_value = plugin_params_get_value,
+    .value_to_text = plugin_params_value_to_text,
+    .text_to_value = plugin_params_text_to_value,
+    .flush = plugin_params_flush,
+};
+
 static bool plugin_init(const struct clap_plugin *plugin) {
     (void)plugin;
     return true; 
 }
 
 static void plugin_destroy(const struct clap_plugin *plugin) {
+    if (!plugin) return;
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
     if (synth) {
         free(synth);
@@ -82,8 +222,16 @@ static bool plugin_activate(const struct clap_plugin *plugin,
                             uint32_t max_frames_count) {
     (void)min_frames_count;
     (void)max_frames_count;
+    if (!plugin || !plugin->plugin_data) return false;
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
+    synth->grain_size = 80.0;
+    synth->density = 35.0;
+    synth->spray = 0.25;
+
     granular_init(&synth->engine, sample_rate);
+    granular_set_grain_size(&synth->engine, (float)synth->grain_size);
+    granular_set_density(&synth->engine, (float)synth->density);
+    granular_set_spray(&synth->engine, (float)synth->spray);
     return true;
 }
 
@@ -101,6 +249,7 @@ static void plugin_stop_processing(const struct clap_plugin *plugin) {
 }
 
 static void plugin_reset(const struct clap_plugin *plugin) {
+    if (!plugin || !plugin->plugin_data) return;
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
     granular_reset(&synth->engine);
 }
@@ -111,7 +260,7 @@ static void process_input_events(GranularSynth *synth, const clap_input_events_t
     const uint32_t event_count = in_events->size(in_events);
     for (uint32_t i = 0; i < event_count; ++i) {
         const clap_event_header_t *hdr = in_events->get(in_events, i);
-        if (hdr->space_id != CLAP_CORE_EVENT_SPACE_ID) continue;
+        if (!hdr || hdr->space_id != CLAP_CORE_EVENT_SPACE_ID) continue;
 
         if (hdr->type == CLAP_EVENT_NOTE_ON) {
             const clap_event_note_t *note = (const clap_event_note_t *)hdr;
@@ -120,12 +269,29 @@ static void process_input_events(GranularSynth *synth, const clap_input_events_t
         } else if (hdr->type == CLAP_EVENT_NOTE_OFF) {
             const clap_event_note_t *note = (const clap_event_note_t *)hdr;
             granular_note_off(&synth->engine, note->key);
+        } else if (hdr->type == CLAP_EVENT_PARAM_VALUE) {
+            const clap_event_param_value_t *ev = (const clap_event_param_value_t *)hdr;
+            switch (ev->param_id) {
+                case PARAM_GRAIN_SIZE:
+                    synth->grain_size = ev->value;
+                    granular_set_grain_size(&synth->engine, (float)ev->value);
+                    break;
+                case PARAM_DENSITY:
+                    synth->density = ev->value;
+                    granular_set_density(&synth->engine, (float)ev->value);
+                    break;
+                case PARAM_SPRAY:
+                    synth->spray = ev->value;
+                    granular_set_spray(&synth->engine, (float)ev->value);
+                    break;
+            }
         }
     }
 }
 
 static clap_process_status plugin_process(const struct clap_plugin *plugin,
                                           const clap_process_t *process) {
+    if (!plugin || !plugin->plugin_data || !process) return CLAP_PROCESS_CONTINUE;
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
 
     process_input_events(synth, process->in_events);
@@ -155,11 +321,16 @@ static clap_process_status plugin_process(const struct clap_plugin *plugin,
 
 static const void* plugin_get_extension(const struct clap_plugin *plugin, const char *id) {
     (void)plugin;
+    if (!id) return NULL;
+
     if (strcmp(id, CLAP_EXT_AUDIO_PORTS) == 0) {
         return &audio_ports;
     }
     if (strcmp(id, CLAP_EXT_NOTE_PORTS) == 0) {
         return &note_ports;
+    }
+    if (strcmp(id, CLAP_EXT_PARAMS) == 0) {
+        return &params_ext;
     }
     return NULL;
 }

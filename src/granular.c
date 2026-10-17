@@ -26,6 +26,10 @@ void granular_init(GranularEngine *engine, double sample_rate) {
     engine->playhead = 0.0f;
     engine->next_voice_rr = 0;
 
+    engine->grain_size_ms = 80.0f;
+    engine->density = 35.0f;
+    engine->spray = 0.25f;
+
     init_hann_lut(engine);
     init_sample_buffer(engine);
 
@@ -39,6 +43,18 @@ void granular_init(GranularEngine *engine, double sample_rate) {
         engine->voices[v].frequency = 440.0f;
         engine->voices[v].spawn_timer = 0.0f;
     }
+}
+
+void granular_set_grain_size(GranularEngine *engine, float size_ms) {
+    engine->grain_size_ms = size_ms;
+}
+
+void granular_set_density(GranularEngine *engine, float density) {
+    engine->density = density;
+}
+
+void granular_set_spray(GranularEngine *engine, float spray) {
+    engine->spray = spray;
 }
 
 void granular_note_on(GranularEngine *engine, int32_t key, float frequency) {
@@ -89,14 +105,15 @@ static void spawn_grain(GranularEngine *engine, float frequency) {
         if (!engine->grains[i].active) {
             engine->grains[i].active = true;
 
-            float jitter = ((float)(rand() % 2000) - 1000.0f);
+            float max_jitter = 8000.0f * engine->spray;
+            float jitter = ((float)(rand() % 2000) / 1000.0f - 1.0f) * max_jitter;
             float start_pos = engine->playhead + jitter;
-            if (start_pos < 0.0f) start_pos += (float)SAMPLE_BUFFER_SIZE;
-            if (start_pos >= (float)SAMPLE_BUFFER_SIZE) start_pos -= (float)SAMPLE_BUFFER_SIZE;
+            while (start_pos < 0.0f) start_pos += (float)SAMPLE_BUFFER_SIZE;
+            while (start_pos >= (float)SAMPLE_BUFFER_SIZE) start_pos -= (float)SAMPLE_BUFFER_SIZE;
 
             engine->grains[i].pos = start_pos;
             engine->grains[i].speed = frequency / 220.0f;
-            engine->grains[i].length = (float)engine->sample_rate * 0.09f;
+            engine->grains[i].length = (float)engine->sample_rate * (engine->grain_size_ms / 1000.0f);
             engine->grains[i].progress = 0.0f;
             engine->grains[i].pan = (float)(rand() % 1000) / 1000.0f;
             break;
@@ -105,7 +122,9 @@ static void spawn_grain(GranularEngine *engine, float frequency) {
 }
 
 void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) {
-    const float spawn_interval = (engine->sample_rate > 0.0) ? ((float)engine->sample_rate / 35.0f) : 1000.0f;
+    const float spawn_interval = (engine->sample_rate > 0.0 && engine->density > 0.0f) 
+                               ? ((float)engine->sample_rate / engine->density) 
+                               : 1000.0f;
 
     for (int v = 0; v < MAX_VOICES; ++v) {
         if (!engine->voices[v].active) continue;
