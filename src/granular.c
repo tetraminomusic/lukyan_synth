@@ -4,6 +4,7 @@
 
 #define PI 3.14159265358979323846
 #define BASE_ROOT_FREQ 220.0f
+#define NUM_HARMONICS 14
 
 static void init_hann_lut(GranularEngine *engine) {
     for (int i = 0; i < HANN_LUT_SIZE; ++i) {
@@ -17,12 +18,15 @@ static void init_sample_buffer(GranularEngine *engine) {
     float num_cycles = roundf((float)SAMPLE_BUFFER_SIZE * BASE_ROOT_FREQ / sr);
 
     for (int i = 0; i < SAMPLE_BUFFER_SIZE; ++i) {
-        float phase = 2.0f * (float)PI * num_cycles * ((float)i / (float)SAMPLE_BUFFER_SIZE);
-        float wave = sinf(phase) * 0.4f
-                   + sinf(phase * 2.0f) * 0.25f
-                   + sinf(phase * 3.0f) * 0.15f
-                   + sinf(phase * 4.0f) * 0.1f;
-        engine->sample_buffer[i] = wave;
+        float base_phase = 2.0f * (float)PI * num_cycles * ((float)i / (float)SAMPLE_BUFFER_SIZE);
+        float wave = 0.0f;
+
+        for (int h = 1; h <= NUM_HARMONICS; ++h) {
+            float harm_amp = 1.0f / (float)h;
+            wave += sinf(base_phase * (float)h) * harm_amp;
+        }
+
+        engine->sample_buffer[i] = wave * 0.4f;
     }
 }
 
@@ -164,7 +168,7 @@ void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) 
         float frac = grain->pos - (float)idx_a;
         float audio_val = engine->sample_buffer[idx_a] * (1.0f - frac) + engine->sample_buffer[idx_b] * frac;
 
-        float grain_amp = audio_val * env * 0.04f;
+        float grain_amp = audio_val * env * 0.035f;
         mixed_l += grain_amp * (1.0f - grain->pan);
         mixed_r += grain_amp * grain->pan;
 
