@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #define PI 3.14159265358979323846
+#define BASE_ROOT_FREQ 220.0f
 
 static void init_hann_lut(GranularEngine *engine) {
     for (int i = 0; i < HANN_LUT_SIZE; ++i) {
@@ -11,12 +12,14 @@ static void init_hann_lut(GranularEngine *engine) {
 }
 
 static void init_sample_buffer(GranularEngine *engine) {
+    float sr = (engine->sample_rate > 0.0) ? (float)engine->sample_rate : 44100.0f;
+
     for (int i = 0; i < SAMPLE_BUFFER_SIZE; ++i) {
-        float t = (float)i / (float)SAMPLE_BUFFER_SIZE;
-        float wave = sinf(2.0f * (float)PI * 110.0f * t) * 0.4f
-                   + sinf(2.0f * (float)PI * 220.0f * t) * 0.25f
-                   + sinf(2.0f * (float)PI * 330.0f * t) * 0.15f
-                   + sinf(2.0f * (float)PI * 440.0f * t) * 0.1f;
+        float t = (float)i / sr;
+        float wave = sinf(2.0f * (float)PI * BASE_ROOT_FREQ * t) * 0.4f
+                   + sinf(2.0f * (float)PI * (BASE_ROOT_FREQ * 2.0f) * t) * 0.25f
+                   + sinf(2.0f * (float)PI * (BASE_ROOT_FREQ * 3.0f) * t) * 0.15f
+                   + sinf(2.0f * (float)PI * (BASE_ROOT_FREQ * 4.0f) * t) * 0.1f;
         engine->sample_buffer[i] = wave;
     }
 }
@@ -112,7 +115,7 @@ static void spawn_grain(GranularEngine *engine, float frequency) {
             while (start_pos >= (float)SAMPLE_BUFFER_SIZE) start_pos -= (float)SAMPLE_BUFFER_SIZE;
 
             engine->grains[i].pos = start_pos;
-            engine->grains[i].speed = frequency / 220.0f;
+            engine->grains[i].speed = frequency / BASE_ROOT_FREQ;
             engine->grains[i].length = (float)engine->sample_rate * (engine->grain_size_ms / 1000.0f);
             engine->grains[i].progress = 0.0f;
             engine->grains[i].pan = (float)(rand() % 1000) / 1000.0f;
