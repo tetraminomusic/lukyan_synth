@@ -2,6 +2,7 @@
 #include <clap/ext/audio-ports.h>
 #include <clap/ext/note-ports.h>
 #include <clap/ext/params.h>
+#include <clap/ext/state.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -203,6 +204,39 @@ static const clap_plugin_params_t params_ext = {
     .flush = plugin_params_flush,
 };
 
+static bool plugin_state_save(const clap_plugin_t *plugin, const clap_ostream_t *stream) {
+    if (!plugin || !plugin->plugin_data || !stream) return false;
+    GranularSynth *synth = (GranularSynth *)plugin->plugin_data;
+
+    double state_data[3] = { synth->grain_size, synth->density, synth->spray };
+    int64_t written = stream->write(stream, state_data, sizeof(state_data));
+    return written == sizeof(state_data);
+}
+
+static bool plugin_state_load(const clap_plugin_t *plugin, const clap_istream_t *stream) {
+    if (!plugin || !plugin->plugin_data || !stream) return false;
+    GranularSynth *synth = (GranularSynth *)plugin->plugin_data;
+
+    double state_data[3] = { 0 };
+    int64_t read = stream->read(stream, state_data, sizeof(state_data));
+    if (read == sizeof(state_data)) {
+        synth->grain_size = state_data[0];
+        synth->density = state_data[1];
+        synth->spray = state_data[2];
+
+        granular_set_grain_size(&synth->engine, (float)synth->grain_size);
+        granular_set_density(&synth->engine, (float)synth->density);
+        granular_set_spray(&synth->engine, (float)synth->spray);
+        return true;
+    }
+    return false;
+}
+
+static const clap_plugin_state_t state_ext = {
+    .save = plugin_state_save,
+    .load = plugin_state_load,
+};
+
 static bool plugin_init(const struct clap_plugin *plugin) {
     (void)plugin;
     return true; 
@@ -332,6 +366,9 @@ static const void* plugin_get_extension(const struct clap_plugin *plugin, const 
     if (strcmp(id, CLAP_EXT_PARAMS) == 0) {
         return &params_ext;
     }
+    if (strcmp(id, CLAP_EXT_STATE) == 0) {
+        return &state_ext;
+    }
     return NULL;
 }
 
@@ -354,6 +391,13 @@ static const clap_plugin_t plugin_class = {
     .on_main_thread = plugin_on_main_thread,
 };
 
+static const char *plugin_features[] = {
+    CLAP_PLUGIN_FEATURE_INSTRUMENT,
+    CLAP_PLUGIN_FEATURE_SYNTHESIZER,
+    CLAP_PLUGIN_FEATURE_STEREO,
+    NULL
+};
+
 static const clap_plugin_descriptor_t plugin_descriptor = {
     .clap_version = CLAP_VERSION_INIT,
     .id = "com.tetramino.lukyansynth", 
@@ -364,12 +408,7 @@ static const clap_plugin_descriptor_t plugin_descriptor = {
     .support_url = NULL,
     .version = "1.0.0",
     .description = "Великий и богоподный полифонический синтезатор с гранулярками by tetramino",
-    .features = (const char*[]){ 
-        CLAP_PLUGIN_FEATURE_INSTRUMENT, 
-        CLAP_PLUGIN_FEATURE_SYNTHESIZER, 
-        CLAP_PLUGIN_FEATURE_STEREO,
-        NULL 
-    }
+    .features = plugin_features
 };
 
 static uint32_t plugin_factory_get_plugin_count(const struct clap_plugin_factory *factory) {
