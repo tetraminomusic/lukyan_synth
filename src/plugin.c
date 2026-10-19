@@ -21,6 +21,7 @@ enum {
     PARAM_GAIN,
     PARAM_CRUSH,
     PARAM_DOWNSAMPLE,
+    PARAM_MORPH,
     PARAM_COUNT
 };
 
@@ -38,6 +39,7 @@ typedef struct {
     double gain;
     double crush;
     double downsample;
+    double morph;
 
     GranularEngine engine;
 } GranularSynth;
@@ -198,6 +200,15 @@ static bool plugin_params_get_info(const clap_plugin_t *plugin, uint32_t index, 
             info->default_value = 1.0;
             return true;
 
+        case PARAM_MORPH:
+            info->id = PARAM_MORPH;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            strncpy(info->name, "Wave Morph", sizeof(info->name));
+            info->min_value = 0.0;
+            info->max_value = 3.0;
+            info->default_value = 0.0;
+            return true;
+
         default:
             return false;
     }
@@ -218,6 +229,7 @@ static bool plugin_params_get_value(const clap_plugin_t *plugin, clap_id param_i
         case PARAM_GAIN:       *out_value = synth->gain; return true;
         case PARAM_CRUSH:      *out_value = synth->crush; return true;
         case PARAM_DOWNSAMPLE: *out_value = synth->downsample; return true;
+        case PARAM_MORPH:      *out_value = synth->morph; return true;
         default: return false;
     }
 }
@@ -237,6 +249,24 @@ static bool plugin_params_value_to_text(const clap_plugin_t *plugin, clap_id par
         case PARAM_GAIN:       snprintf(out_buffer, out_buffer_capacity, "%.0f %%", value * 100.0); return true;
         case PARAM_CRUSH:      snprintf(out_buffer, out_buffer_capacity, "%.1f bit", value); return true;
         case PARAM_DOWNSAMPLE: snprintf(out_buffer, out_buffer_capacity, "%.0fx", value); return true;
+        case PARAM_MORPH: {
+            if (value < 0.1) {
+                snprintf(out_buffer, out_buffer_capacity, "Sine");
+            } else if (value < 0.9) {
+                snprintf(out_buffer, out_buffer_capacity, "Sine -> Tri (%.1f)", value);
+            } else if (value < 1.1) {
+                snprintf(out_buffer, out_buffer_capacity, "Triangle");
+            } else if (value < 1.9) {
+                snprintf(out_buffer, out_buffer_capacity, "Tri -> Saw (%.1f)", value);
+            } else if (value < 2.1) {
+                snprintf(out_buffer, out_buffer_capacity, "Sawtooth");
+            } else if (value < 2.9) {
+                snprintf(out_buffer, out_buffer_capacity, "Saw -> Sqr (%.1f)", value);
+            } else {
+                snprintf(out_buffer, out_buffer_capacity, "Square");
+            }
+            return true;
+        }
         default: return false;
     }
 }
@@ -288,6 +318,10 @@ static void apply_param_value(GranularSynth *synth, clap_id param_id, double val
             synth->downsample = value;
             granular_set_downsample(&synth->engine, (float)value);
             break;
+        case PARAM_MORPH:
+            synth->morph = value;
+            granular_set_wave_morph(&synth->engine, (float)value);
+            break;
     }
 }
 
@@ -331,7 +365,8 @@ static bool plugin_state_save(const clap_plugin_t *plugin, const clap_ostream_t 
         synth->release,
         synth->gain,
         synth->crush,
-        synth->downsample
+        synth->downsample,
+        synth->morph
     };
     int64_t written = stream->write(stream, state_data, sizeof(state_data));
     return written == sizeof(state_data);
@@ -389,6 +424,7 @@ static bool plugin_activate(const struct clap_plugin *plugin,
     synth->gain = 0.75;
     synth->crush = 16.0;
     synth->downsample = 1.0;
+    synth->morph = 0.0;
 
     granular_init(&synth->engine, sample_rate);
     for (int i = 0; i < PARAM_COUNT; ++i) {
