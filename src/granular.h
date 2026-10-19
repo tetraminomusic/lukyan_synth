@@ -51,6 +51,13 @@ typedef struct {
     float sustain;
     float release_ms;
 
+    float crush_bits;
+    float downsample;
+    float ds_counter;
+    float held_sample_l;
+    float held_sample_r;
+    float pitch_bend_semitones;
+
     float sample_buffer[SAMPLE_BUFFER_SIZE];
     float hann_lut[HANN_LUT_SIZE];
     Grain grains[MAX_GRAINS];
@@ -69,6 +76,9 @@ void granular_set_attack(GranularEngine *engine, float attack_ms);
 void granular_set_decay(GranularEngine *engine, float decay_ms);
 void granular_set_sustain(GranularEngine *engine, float sustain);
 void granular_set_release(GranularEngine *engine, float release_ms);
+void granular_set_crush(GranularEngine *engine, float bits);
+void granular_set_downsample(GranularEngine *engine, float factor);
+void granular_set_pitch_bend(GranularEngine *engine, float semitones);
 void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r);
 
 #endif

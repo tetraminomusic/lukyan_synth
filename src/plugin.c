@@ -19,6 +19,8 @@ enum {
     PARAM_SUSTAIN,
     PARAM_RELEASE,
     PARAM_GAIN,
+    PARAM_CRUSH,
+    PARAM_DOWNSAMPLE,
     PARAM_COUNT
 };
 
@@ -34,6 +36,8 @@ typedef struct {
     double sustain;
     double release;
     double gain;
+    double crush;
+    double downsample;
 
     GranularEngine engine;
 } GranularSynth;
@@ -176,6 +180,24 @@ static bool plugin_params_get_info(const clap_plugin_t *plugin, uint32_t index, 
             info->default_value = 0.75;
             return true;
 
+        case PARAM_CRUSH:
+            info->id = PARAM_CRUSH;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            strncpy(info->name, "Lo-Fi Bits", sizeof(info->name));
+            info->min_value = 4.0;
+            info->max_value = 16.0;
+            info->default_value = 16.0;
+            return true;
+
+        case PARAM_DOWNSAMPLE:
+            info->id = PARAM_DOWNSAMPLE;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            strncpy(info->name, "Lo-Fi Rate", sizeof(info->name));
+            info->min_value = 1.0;
+            info->max_value = 24.0;
+            info->default_value = 1.0;
+            return true;
+
         default:
             return false;
     }
@@ -194,6 +216,8 @@ static bool plugin_params_get_value(const clap_plugin_t *plugin, clap_id param_i
         case PARAM_SUSTAIN:    *out_value = synth->sustain; return true;
         case PARAM_RELEASE:    *out_value = synth->release; return true;
         case PARAM_GAIN:       *out_value = synth->gain; return true;
+        case PARAM_CRUSH:      *out_value = synth->crush; return true;
+        case PARAM_DOWNSAMPLE: *out_value = synth->downsample; return true;
         default: return false;
     }
 }
@@ -211,6 +235,8 @@ static bool plugin_params_value_to_text(const clap_plugin_t *plugin, clap_id par
         case PARAM_SUSTAIN:    snprintf(out_buffer, out_buffer_capacity, "%.2f", value); return true;
         case PARAM_RELEASE:    snprintf(out_buffer, out_buffer_capacity, "%.1f ms", value); return true;
         case PARAM_GAIN:       snprintf(out_buffer, out_buffer_capacity, "%.0f %%", value * 100.0); return true;
+        case PARAM_CRUSH:      snprintf(out_buffer, out_buffer_capacity, "%.1f bit", value); return true;
+        case PARAM_DOWNSAMPLE: snprintf(out_buffer, out_buffer_capacity, "%.0fx", value); return true;
         default: return false;
     }
 }
@@ -254,6 +280,14 @@ static void apply_param_value(GranularSynth *synth, clap_id param_id, double val
             synth->gain = value;
             granular_set_gain(&synth->engine, (float)value);
             break;
+        case PARAM_CRUSH:
+            synth->crush = value;
+            granular_set_crush(&synth->engine, (float)value);
+            break;
+        case PARAM_DOWNSAMPLE:
+            synth->downsample = value;
+            granular_set_downsample(&synth->engine, (float)value);
+            break;
     }
 }
 
@@ -295,7 +329,9 @@ static bool plugin_state_save(const clap_plugin_t *plugin, const clap_ostream_t 
         synth->decay,
         synth->sustain,
         synth->release,
-        synth->gain
+        synth->gain,
+        synth->crush,
+        synth->downsample
     };
     int64_t written = stream->write(stream, state_data, sizeof(state_data));
     return written == sizeof(state_data);
@@ -351,6 +387,8 @@ static bool plugin_activate(const struct clap_plugin *plugin,
     synth->sustain = 0.75;
     synth->release = 350.0;
     synth->gain = 0.75;
+    synth->crush = 16.0;
+    synth->downsample = 1.0;
 
     granular_init(&synth->engine, sample_rate);
     for (int i = 0; i < PARAM_COUNT; ++i) {
@@ -398,6 +436,14 @@ static void process_input_events(GranularSynth *synth, const clap_input_events_t
         } else if (hdr->type == CLAP_EVENT_PARAM_VALUE) {
             const clap_event_param_value_t *ev = (const clap_event_param_value_t *)hdr;
             apply_param_value(synth, ev->param_id, ev->value);
+        } else if (hdr->type == CLAP_EVENT_MIDI) {
+            const clap_event_midi_t *midi = (const clap_event_midi_t *)hdr;
+            uint8_t status = midi->data[0] & 0xF0;
+            if (status == 0xE0) {
+                int bend_raw = (midi->data[1] & 0x7F) | ((midi->data[2] & 0x7F) << 7);
+                float bend_semitones = ((float)(bend_raw - 8192) / 8192.0f) * 2.0f;
+                granular_set_pitch_bend(&synth->engine, bend_semitones);
+            }
         }
     }
 }
