@@ -47,6 +47,7 @@ typedef struct {
     float spray;
     float gain;
     float wave_morph;
+    float tone;
 
     float attack_ms;
     float decay_ms;
@@ -59,6 +60,11 @@ typedef struct {
     float held_sample_l;
     float held_sample_r;
     float pitch_bend_semitones;
+
+    float lp_l;
+    float lp_r;
+    float hp_l;
+    float hp_r;
 
     float sample_buffers[NUM_WAVEFORMS][SAMPLE_BUFFER_SIZE];
     float hann_lut[HANN_LUT_SIZE];
@@ -75,6 +81,7 @@ void granular_set_density(GranularEngine *engine, float density);
 void granular_set_spray(GranularEngine *engine, float spray);
 void granular_set_gain(GranularEngine *engine, float gain);
 void granular_set_wave_morph(GranularEngine *engine, float morph);
+void granular_set_tone(GranularEngine *engine, float tone);
 void granular_set_attack(GranularEngine *engine, float attack_ms);
 void granular_set_decay(GranularEngine *engine, float decay_ms);
 void granular_set_sustain(GranularEngine *engine, float sustain);

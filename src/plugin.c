@@ -22,6 +22,7 @@ enum {
     PARAM_CRUSH,
     PARAM_DOWNSAMPLE,
     PARAM_MORPH,
+    PARAM_TONE,
     PARAM_COUNT
 };
 
@@ -40,6 +41,7 @@ typedef struct {
     double crush;
     double downsample;
     double morph;
+    double tone;
 
     GranularEngine engine;
 } GranularSynth;
@@ -209,6 +211,15 @@ static bool plugin_params_get_info(const clap_plugin_t *plugin, uint32_t index, 
             info->default_value = 0.0;
             return true;
 
+        case PARAM_TONE:
+            info->id = PARAM_TONE;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            strncpy(info->name, "Tone (Hi-Fi)", sizeof(info->name));
+            info->min_value = 0.0;
+            info->max_value = 1.0;
+            info->default_value = 0.50;
+            return true;
+
         default:
             return false;
     }
@@ -230,6 +241,7 @@ static bool plugin_params_get_value(const clap_plugin_t *plugin, clap_id param_i
         case PARAM_CRUSH:      *out_value = synth->crush; return true;
         case PARAM_DOWNSAMPLE: *out_value = synth->downsample; return true;
         case PARAM_MORPH:      *out_value = synth->morph; return true;
+        case PARAM_TONE:       *out_value = synth->tone; return true;
         default: return false;
     }
 }
@@ -249,6 +261,7 @@ static bool plugin_params_value_to_text(const clap_plugin_t *plugin, clap_id par
         case PARAM_GAIN:       snprintf(out_buffer, out_buffer_capacity, "%.0f %%", value * 100.0); return true;
         case PARAM_CRUSH:      snprintf(out_buffer, out_buffer_capacity, "%.1f bit", value); return true;
         case PARAM_DOWNSAMPLE: snprintf(out_buffer, out_buffer_capacity, "%.0fx", value); return true;
+        case PARAM_TONE:       snprintf(out_buffer, out_buffer_capacity, "%.0f %%", value * 100.0); return true;
         case PARAM_MORPH: {
             if (value < 0.1) {
                 snprintf(out_buffer, out_buffer_capacity, "Sine");
@@ -322,6 +335,10 @@ static void apply_param_value(GranularSynth *synth, clap_id param_id, double val
             synth->morph = value;
             granular_set_wave_morph(&synth->engine, (float)value);
             break;
+        case PARAM_TONE:
+            synth->tone = value;
+            granular_set_tone(&synth->engine, (float)value);
+            break;
     }
 }
 
@@ -366,7 +383,8 @@ static bool plugin_state_save(const clap_plugin_t *plugin, const clap_ostream_t 
         synth->gain,
         synth->crush,
         synth->downsample,
-        synth->morph
+        synth->morph,
+        synth->tone
     };
     int64_t written = stream->write(stream, state_data, sizeof(state_data));
     return written == sizeof(state_data);
@@ -425,6 +443,7 @@ static bool plugin_activate(const struct clap_plugin *plugin,
     synth->crush = 16.0;
     synth->downsample = 1.0;
     synth->morph = 0.0;
+    synth->tone = 0.50;
 
     granular_init(&synth->engine, sample_rate);
     for (int i = 0; i < PARAM_COUNT; ++i) {
