@@ -21,8 +21,20 @@ enum {
     PARAM_GAIN,
     PARAM_CRUSH,
     PARAM_DOWNSAMPLE,
-    PARAM_MORPH,
     PARAM_TONE,
+
+    PARAM_OSC1_GAIN,
+    PARAM_OSC1_SEMI,
+    PARAM_OSC1_MORPH,
+
+    PARAM_OSC2_GAIN,
+    PARAM_OSC2_SEMI,
+    PARAM_OSC2_MORPH,
+
+    PARAM_OSC3_GAIN,
+    PARAM_OSC3_SEMI,
+    PARAM_OSC3_MORPH,
+
     PARAM_COUNT
 };
 
@@ -40,8 +52,11 @@ typedef struct {
     double gain;
     double crush;
     double downsample;
-    double morph;
     double tone;
+
+    double osc_gain[NUM_OSCS];
+    double osc_semi[NUM_OSCS];
+    double osc_morph[NUM_OSCS];
 
     GranularEngine engine;
 } GranularSynth;
@@ -202,15 +217,6 @@ static bool plugin_params_get_info(const clap_plugin_t *plugin, uint32_t index, 
             info->default_value = 1.0;
             return true;
 
-        case PARAM_MORPH:
-            info->id = PARAM_MORPH;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Wave Morph", sizeof(info->name));
-            info->min_value = 0.0;
-            info->max_value = 3.0;
-            info->default_value = 0.0;
-            return true;
-
         case PARAM_TONE:
             info->id = PARAM_TONE;
             info->flags = CLAP_PARAM_IS_AUTOMATABLE;
@@ -218,6 +224,87 @@ static bool plugin_params_get_info(const clap_plugin_t *plugin, uint32_t index, 
             info->min_value = 0.0;
             info->max_value = 1.0;
             info->default_value = 0.50;
+            return true;
+
+        case PARAM_OSC1_GAIN:
+            info->id = PARAM_OSC1_GAIN;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            strncpy(info->name, "Osc 1 Gain", sizeof(info->name));
+            info->min_value = 0.0;
+            info->max_value = 1.0;
+            info->default_value = 0.80;
+            return true;
+
+        case PARAM_OSC1_SEMI:
+            info->id = PARAM_OSC1_SEMI;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED;
+            strncpy(info->name, "Osc 1 Semi", sizeof(info->name));
+            info->min_value = -24.0;
+            info->max_value = 24.0;
+            info->default_value = 0.0;
+            return true;
+
+        case PARAM_OSC1_MORPH:
+            info->id = PARAM_OSC1_MORPH;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            strncpy(info->name, "Osc 1 Morph", sizeof(info->name));
+            info->min_value = 0.0;
+            info->max_value = 3.0;
+            info->default_value = 0.0;
+            return true;
+
+        case PARAM_OSC2_GAIN:
+            info->id = PARAM_OSC2_GAIN;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            strncpy(info->name, "Osc 2 Gain", sizeof(info->name));
+            info->min_value = 0.0;
+            info->max_value = 1.0;
+            info->default_value = 0.45;
+            return true;
+
+        case PARAM_OSC2_SEMI:
+            info->id = PARAM_OSC2_SEMI;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED;
+            strncpy(info->name, "Osc 2 Semi", sizeof(info->name));
+            info->min_value = -24.0;
+            info->max_value = 24.0;
+            info->default_value = 12.0;
+            return true;
+
+        case PARAM_OSC2_MORPH:
+            info->id = PARAM_OSC2_MORPH;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            strncpy(info->name, "Osc 2 Morph", sizeof(info->name));
+            info->min_value = 0.0;
+            info->max_value = 3.0;
+            info->default_value = 1.0;
+            return true;
+
+        case PARAM_OSC3_GAIN:
+            info->id = PARAM_OSC3_GAIN;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            strncpy(info->name, "Osc 3 Gain", sizeof(info->name));
+            info->min_value = 0.0;
+            info->max_value = 1.0;
+            info->default_value = 0.35;
+            return true;
+
+        case PARAM_OSC3_SEMI:
+            info->id = PARAM_OSC3_SEMI;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED;
+            strncpy(info->name, "Osc 3 Semi", sizeof(info->name));
+            info->min_value = -24.0;
+            info->max_value = 24.0;
+            info->default_value = 7.0;
+            return true;
+
+        case PARAM_OSC3_MORPH:
+            info->id = PARAM_OSC3_MORPH;
+            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+            strncpy(info->name, "Osc 3 Morph", sizeof(info->name));
+            info->min_value = 0.0;
+            info->max_value = 3.0;
+            info->default_value = 2.0;
             return true;
 
         default:
@@ -240,8 +327,20 @@ static bool plugin_params_get_value(const clap_plugin_t *plugin, clap_id param_i
         case PARAM_GAIN:       *out_value = synth->gain; return true;
         case PARAM_CRUSH:      *out_value = synth->crush; return true;
         case PARAM_DOWNSAMPLE: *out_value = synth->downsample; return true;
-        case PARAM_MORPH:      *out_value = synth->morph; return true;
         case PARAM_TONE:       *out_value = synth->tone; return true;
+
+        case PARAM_OSC1_GAIN:  *out_value = synth->osc_gain[0]; return true;
+        case PARAM_OSC1_SEMI:  *out_value = synth->osc_semi[0]; return true;
+        case PARAM_OSC1_MORPH: *out_value = synth->osc_morph[0]; return true;
+
+        case PARAM_OSC2_GAIN:  *out_value = synth->osc_gain[1]; return true;
+        case PARAM_OSC2_SEMI:  *out_value = synth->osc_semi[1]; return true;
+        case PARAM_OSC2_MORPH: *out_value = synth->osc_morph[1]; return true;
+
+        case PARAM_OSC3_GAIN:  *out_value = synth->osc_gain[2]; return true;
+        case PARAM_OSC3_SEMI:  *out_value = synth->osc_semi[2]; return true;
+        case PARAM_OSC3_MORPH: *out_value = synth->osc_morph[2]; return true;
+
         default: return false;
     }
 }
@@ -262,24 +361,32 @@ static bool plugin_params_value_to_text(const clap_plugin_t *plugin, clap_id par
         case PARAM_CRUSH:      snprintf(out_buffer, out_buffer_capacity, "%.1f bit", value); return true;
         case PARAM_DOWNSAMPLE: snprintf(out_buffer, out_buffer_capacity, "%.0fx", value); return true;
         case PARAM_TONE:       snprintf(out_buffer, out_buffer_capacity, "%.0f %%", value * 100.0); return true;
-        case PARAM_MORPH: {
-            if (value < 0.1) {
-                snprintf(out_buffer, out_buffer_capacity, "Sine");
-            } else if (value < 0.9) {
-                snprintf(out_buffer, out_buffer_capacity, "Sine -> Tri (%.1f)", value);
-            } else if (value < 1.1) {
-                snprintf(out_buffer, out_buffer_capacity, "Triangle");
-            } else if (value < 1.9) {
-                snprintf(out_buffer, out_buffer_capacity, "Tri -> Saw (%.1f)", value);
-            } else if (value < 2.1) {
-                snprintf(out_buffer, out_buffer_capacity, "Sawtooth");
-            } else if (value < 2.9) {
-                snprintf(out_buffer, out_buffer_capacity, "Saw -> Sqr (%.1f)", value);
-            } else {
-                snprintf(out_buffer, out_buffer_capacity, "Square");
-            }
+
+        case PARAM_OSC1_GAIN:
+        case PARAM_OSC2_GAIN:
+        case PARAM_OSC3_GAIN:
+            snprintf(out_buffer, out_buffer_capacity, "%.0f %%", value * 100.0);
+            return true;
+
+        case PARAM_OSC1_SEMI:
+        case PARAM_OSC2_SEMI:
+        case PARAM_OSC3_SEMI:
+            snprintf(out_buffer, out_buffer_capacity, "%+.0f st", value);
+            return true;
+
+        case PARAM_OSC1_MORPH:
+        case PARAM_OSC2_MORPH:
+        case PARAM_OSC3_MORPH: {
+            if (value < 0.1) snprintf(out_buffer, out_buffer_capacity, "Sine");
+            else if (value < 0.9) snprintf(out_buffer, out_buffer_capacity, "Sine->Tri");
+            else if (value < 1.1) snprintf(out_buffer, out_buffer_capacity, "Triangle");
+            else if (value < 1.9) snprintf(out_buffer, out_buffer_capacity, "Tri->Saw");
+            else if (value < 2.1) snprintf(out_buffer, out_buffer_capacity, "Saw");
+            else if (value < 2.9) snprintf(out_buffer, out_buffer_capacity, "Saw->Sqr");
+            else snprintf(out_buffer, out_buffer_capacity, "Square");
             return true;
         }
+
         default: return false;
     }
 }
@@ -331,13 +438,48 @@ static void apply_param_value(GranularSynth *synth, clap_id param_id, double val
             synth->downsample = value;
             granular_set_downsample(&synth->engine, (float)value);
             break;
-        case PARAM_MORPH:
-            synth->morph = value;
-            granular_set_wave_morph(&synth->engine, (float)value);
-            break;
         case PARAM_TONE:
             synth->tone = value;
             granular_set_tone(&synth->engine, (float)value);
+            break;
+
+        case PARAM_OSC1_GAIN:
+            synth->osc_gain[0] = value;
+            granular_set_osc_gain(&synth->engine, 0, (float)value);
+            break;
+        case PARAM_OSC1_SEMI:
+            synth->osc_semi[0] = value;
+            granular_set_osc_semi(&synth->engine, 0, (float)value);
+            break;
+        case PARAM_OSC1_MORPH:
+            synth->osc_morph[0] = value;
+            granular_set_osc_morph(&synth->engine, 0, (float)value);
+            break;
+
+        case PARAM_OSC2_GAIN:
+            synth->osc_gain[1] = value;
+            granular_set_osc_gain(&synth->engine, 1, (float)value);
+            break;
+        case PARAM_OSC2_SEMI:
+            synth->osc_semi[1] = value;
+            granular_set_osc_semi(&synth->engine, 1, (float)value);
+            break;
+        case PARAM_OSC2_MORPH:
+            synth->osc_morph[1] = value;
+            granular_set_osc_morph(&synth->engine, 1, (float)value);
+            break;
+
+        case PARAM_OSC3_GAIN:
+            synth->osc_gain[2] = value;
+            granular_set_osc_gain(&synth->engine, 2, (float)value);
+            break;
+        case PARAM_OSC3_SEMI:
+            synth->osc_semi[2] = value;
+            granular_set_osc_semi(&synth->engine, 2, (float)value);
+            break;
+        case PARAM_OSC3_MORPH:
+            synth->osc_morph[2] = value;
+            granular_set_osc_morph(&synth->engine, 2, (float)value);
             break;
     }
 }
@@ -383,8 +525,16 @@ static bool plugin_state_save(const clap_plugin_t *plugin, const clap_ostream_t 
         synth->gain,
         synth->crush,
         synth->downsample,
-        synth->morph,
-        synth->tone
+        synth->tone,
+        synth->osc_gain[0],
+        synth->osc_semi[0],
+        synth->osc_morph[0],
+        synth->osc_gain[1],
+        synth->osc_semi[1],
+        synth->osc_morph[1],
+        synth->osc_gain[2],
+        synth->osc_semi[2],
+        synth->osc_morph[2]
     };
     int64_t written = stream->write(stream, state_data, sizeof(state_data));
     return written == sizeof(state_data);
@@ -442,8 +592,19 @@ static bool plugin_activate(const struct clap_plugin *plugin,
     synth->gain = 0.75;
     synth->crush = 16.0;
     synth->downsample = 1.0;
-    synth->morph = 0.0;
     synth->tone = 0.50;
+
+    synth->osc_gain[0] = 0.80;
+    synth->osc_semi[0] = 0.0;
+    synth->osc_morph[0] = 0.0;
+
+    synth->osc_gain[1] = 0.45;
+    synth->osc_semi[1] = 12.0;
+    synth->osc_morph[1] = 1.0;
+
+    synth->osc_gain[2] = 0.35;
+    synth->osc_semi[2] = 7.0;
+    synth->osc_morph[2] = 2.0;
 
     granular_init(&synth->engine, sample_rate);
     for (int i = 0; i < PARAM_COUNT; ++i) {
