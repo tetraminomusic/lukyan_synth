@@ -3,78 +3,22 @@
 #include <clap/ext/note-ports.h>
 #include <clap/ext/params.h>
 #include <clap/ext/state.h>
-#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
 
-#include "granular.h"
-
-enum {
-    PARAM_GRAIN_SIZE = 0,
-    PARAM_DENSITY,
-    PARAM_SPRAY,
-    PARAM_ATTACK,
-    PARAM_DECAY,
-    PARAM_SUSTAIN,
-    PARAM_RELEASE,
-    PARAM_GAIN,
-    PARAM_CRUSH,
-    PARAM_DOWNSAMPLE,
-    PARAM_TONE,
-
-    PARAM_OSC1_GAIN,
-    PARAM_OSC1_SEMI,
-    PARAM_OSC1_MORPH,
-
-    PARAM_OSC2_GAIN,
-    PARAM_OSC2_SEMI,
-    PARAM_OSC2_MORPH,
-
-    PARAM_OSC3_GAIN,
-    PARAM_OSC3_SEMI,
-    PARAM_OSC3_MORPH,
-
-    PARAM_COUNT
-};
-
-typedef struct {
-    clap_plugin_t plugin; 
-    const clap_host_t* host;
-
-    double grain_size;
-    double density;
-    double spray;
-    double attack;
-    double decay;
-    double sustain;
-    double release;
-    double gain;
-    double crush;
-    double downsample;
-    double tone;
-
-    double osc_gain[NUM_OSCS];
-    double osc_semi[NUM_OSCS];
-    double osc_morph[NUM_OSCS];
-
-    GranularEngine engine;
-} GranularSynth;
+#include "parameters.h"
 
 static uint32_t plugin_audio_ports_count(const clap_plugin_t *plugin, bool is_input) {
     (void)plugin;
     return is_input ? 0 : 1;
 }
 
-static bool plugin_audio_ports_get(const clap_plugin_t *plugin,
-                                   uint32_t index,
-                                   bool is_input,
-                                   clap_audio_port_info_t *info) {
+static bool plugin_audio_ports_get(const clap_plugin_t *plugin, uint32_t index, bool is_input, clap_audio_port_info_t *info) {
     (void)plugin;
     if (!info || is_input || index > 0) return false;
 
     memset(info, 0, sizeof(*info));
-
     info->id = 0;
     strncpy(info->name, "Main Output", sizeof(info->name));
     info->channel_count = 2;
@@ -94,15 +38,11 @@ static uint32_t plugin_note_ports_count(const clap_plugin_t *plugin, bool is_inp
     return is_input ? 1 : 0;
 }
 
-static bool plugin_note_ports_get(const clap_plugin_t *plugin,
-                                  uint32_t index,
-                                  bool is_input,
-                                  clap_note_port_info_t *info) {
+static bool plugin_note_ports_get(const clap_plugin_t *plugin, uint32_t index, bool is_input, clap_note_port_info_t *info) {
     (void)plugin;
     if (!info || !is_input || index > 0) return false;
 
     memset(info, 0, sizeof(*info));
-
     info->id = 0;
     strncpy(info->name, "Note Input", sizeof(info->name));
     info->supported_dialects = CLAP_NOTE_DIALECT_CLAP | CLAP_NOTE_DIALECT_MIDI;
@@ -117,371 +57,27 @@ static const clap_plugin_note_ports_t note_ports = {
 
 static uint32_t plugin_params_count(const clap_plugin_t *plugin) {
     (void)plugin;
-    return PARAM_COUNT;
+    return params_get_count();
 }
 
 static bool plugin_params_get_info(const clap_plugin_t *plugin, uint32_t index, clap_param_info_t *info) {
     (void)plugin;
-    if (!info) return false;
-
-    memset(info, 0, sizeof(*info));
-
-    switch (index) {
-        case PARAM_GRAIN_SIZE:
-            info->id = PARAM_GRAIN_SIZE;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Grain Size", sizeof(info->name));
-            info->min_value = 10.0;
-            info->max_value = 200.0;
-            info->default_value = 65.0;
-            return true;
-
-        case PARAM_DENSITY:
-            info->id = PARAM_DENSITY;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Density", sizeof(info->name));
-            info->min_value = 5.0;
-            info->max_value = 100.0;
-            info->default_value = 30.0;
-            return true;
-
-        case PARAM_SPRAY:
-            info->id = PARAM_SPRAY;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Spray", sizeof(info->name));
-            info->min_value = 0.0;
-            info->max_value = 1.0;
-            info->default_value = 0.15;
-            return true;
-
-        case PARAM_ATTACK:
-            info->id = PARAM_ATTACK;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Attack", sizeof(info->name));
-            info->min_value = 1.0;
-            info->max_value = 2000.0;
-            info->default_value = 20.0;
-            return true;
-
-        case PARAM_DECAY:
-            info->id = PARAM_DECAY;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Decay", sizeof(info->name));
-            info->min_value = 10.0;
-            info->max_value = 2000.0;
-            info->default_value = 200.0;
-            return true;
-
-        case PARAM_SUSTAIN:
-            info->id = PARAM_SUSTAIN;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Sustain", sizeof(info->name));
-            info->min_value = 0.0;
-            info->max_value = 1.0;
-            info->default_value = 0.75;
-            return true;
-
-        case PARAM_RELEASE:
-            info->id = PARAM_RELEASE;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Release", sizeof(info->name));
-            info->min_value = 10.0;
-            info->max_value = 3000.0;
-            info->default_value = 350.0;
-            return true;
-
-        case PARAM_GAIN:
-            info->id = PARAM_GAIN;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Master Gain", sizeof(info->name));
-            info->min_value = 0.0;
-            info->max_value = 1.0;
-            info->default_value = 0.75;
-            return true;
-
-        case PARAM_CRUSH:
-            info->id = PARAM_CRUSH;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Lo-Fi Bits", sizeof(info->name));
-            info->min_value = 4.0;
-            info->max_value = 16.0;
-            info->default_value = 16.0;
-            return true;
-
-        case PARAM_DOWNSAMPLE:
-            info->id = PARAM_DOWNSAMPLE;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Lo-Fi Rate", sizeof(info->name));
-            info->min_value = 1.0;
-            info->max_value = 24.0;
-            info->default_value = 1.0;
-            return true;
-
-        case PARAM_TONE:
-            info->id = PARAM_TONE;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Tone (Hi-Fi)", sizeof(info->name));
-            info->min_value = 0.0;
-            info->max_value = 1.0;
-            info->default_value = 0.50;
-            return true;
-
-        case PARAM_OSC1_GAIN:
-            info->id = PARAM_OSC1_GAIN;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Osc 1 Gain", sizeof(info->name));
-            info->min_value = 0.0;
-            info->max_value = 1.0;
-            info->default_value = 0.80;
-            return true;
-
-        case PARAM_OSC1_SEMI:
-            info->id = PARAM_OSC1_SEMI;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED;
-            strncpy(info->name, "Osc 1 Semi", sizeof(info->name));
-            info->min_value = -24.0;
-            info->max_value = 24.0;
-            info->default_value = 0.0;
-            return true;
-
-        case PARAM_OSC1_MORPH:
-            info->id = PARAM_OSC1_MORPH;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Osc 1 Morph", sizeof(info->name));
-            info->min_value = 0.0;
-            info->max_value = 3.0;
-            info->default_value = 0.0;
-            return true;
-
-        case PARAM_OSC2_GAIN:
-            info->id = PARAM_OSC2_GAIN;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Osc 2 Gain", sizeof(info->name));
-            info->min_value = 0.0;
-            info->max_value = 1.0;
-            info->default_value = 0.45;
-            return true;
-
-        case PARAM_OSC2_SEMI:
-            info->id = PARAM_OSC2_SEMI;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED;
-            strncpy(info->name, "Osc 2 Semi", sizeof(info->name));
-            info->min_value = -24.0;
-            info->max_value = 24.0;
-            info->default_value = 12.0;
-            return true;
-
-        case PARAM_OSC2_MORPH:
-            info->id = PARAM_OSC2_MORPH;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Osc 2 Morph", sizeof(info->name));
-            info->min_value = 0.0;
-            info->max_value = 3.0;
-            info->default_value = 1.0;
-            return true;
-
-        case PARAM_OSC3_GAIN:
-            info->id = PARAM_OSC3_GAIN;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Osc 3 Gain", sizeof(info->name));
-            info->min_value = 0.0;
-            info->max_value = 1.0;
-            info->default_value = 0.35;
-            return true;
-
-        case PARAM_OSC3_SEMI:
-            info->id = PARAM_OSC3_SEMI;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED;
-            strncpy(info->name, "Osc 3 Semi", sizeof(info->name));
-            info->min_value = -24.0;
-            info->max_value = 24.0;
-            info->default_value = 7.0;
-            return true;
-
-        case PARAM_OSC3_MORPH:
-            info->id = PARAM_OSC3_MORPH;
-            info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-            strncpy(info->name, "Osc 3 Morph", sizeof(info->name));
-            info->min_value = 0.0;
-            info->max_value = 3.0;
-            info->default_value = 2.0;
-            return true;
-
-        default:
-            return false;
-    }
+    return params_get_info(index, info);
 }
 
 static bool plugin_params_get_value(const clap_plugin_t *plugin, clap_id param_id, double *out_value) {
-    if (!plugin || !plugin->plugin_data || !out_value) return false;
-    GranularSynth *synth = (GranularSynth *)plugin->plugin_data;
-
-    switch (param_id) {
-        case PARAM_GRAIN_SIZE: *out_value = synth->grain_size; return true;
-        case PARAM_DENSITY:    *out_value = synth->density; return true;
-        case PARAM_SPRAY:      *out_value = synth->spray; return true;
-        case PARAM_ATTACK:     *out_value = synth->attack; return true;
-        case PARAM_DECAY:      *out_value = synth->decay; return true;
-        case PARAM_SUSTAIN:    *out_value = synth->sustain; return true;
-        case PARAM_RELEASE:    *out_value = synth->release; return true;
-        case PARAM_GAIN:       *out_value = synth->gain; return true;
-        case PARAM_CRUSH:      *out_value = synth->crush; return true;
-        case PARAM_DOWNSAMPLE: *out_value = synth->downsample; return true;
-        case PARAM_TONE:       *out_value = synth->tone; return true;
-
-        case PARAM_OSC1_GAIN:  *out_value = synth->osc_gain[0]; return true;
-        case PARAM_OSC1_SEMI:  *out_value = synth->osc_semi[0]; return true;
-        case PARAM_OSC1_MORPH: *out_value = synth->osc_morph[0]; return true;
-
-        case PARAM_OSC2_GAIN:  *out_value = synth->osc_gain[1]; return true;
-        case PARAM_OSC2_SEMI:  *out_value = synth->osc_semi[1]; return true;
-        case PARAM_OSC2_MORPH: *out_value = synth->osc_morph[1]; return true;
-
-        case PARAM_OSC3_GAIN:  *out_value = synth->osc_gain[2]; return true;
-        case PARAM_OSC3_SEMI:  *out_value = synth->osc_semi[2]; return true;
-        case PARAM_OSC3_MORPH: *out_value = synth->osc_morph[2]; return true;
-
-        default: return false;
-    }
+    if (!plugin || !plugin->plugin_data) return false;
+    return params_get_value((const GranularSynth *)plugin->plugin_data, param_id, out_value);
 }
 
 static bool plugin_params_value_to_text(const clap_plugin_t *plugin, clap_id param_id, double value, char *out_buffer, uint32_t out_buffer_capacity) {
     (void)plugin;
-    if (!out_buffer || out_buffer_capacity == 0) return false;
-
-    switch (param_id) {
-        case PARAM_GRAIN_SIZE: snprintf(out_buffer, out_buffer_capacity, "%.1f ms", value); return true;
-        case PARAM_DENSITY:    snprintf(out_buffer, out_buffer_capacity, "%.1f gr/s", value); return true;
-        case PARAM_SPRAY:      snprintf(out_buffer, out_buffer_capacity, "%.2f", value); return true;
-        case PARAM_ATTACK:     snprintf(out_buffer, out_buffer_capacity, "%.1f ms", value); return true;
-        case PARAM_DECAY:      snprintf(out_buffer, out_buffer_capacity, "%.1f ms", value); return true;
-        case PARAM_SUSTAIN:    snprintf(out_buffer, out_buffer_capacity, "%.2f", value); return true;
-        case PARAM_RELEASE:    snprintf(out_buffer, out_buffer_capacity, "%.1f ms", value); return true;
-        case PARAM_GAIN:       snprintf(out_buffer, out_buffer_capacity, "%.0f %%", value * 100.0); return true;
-        case PARAM_CRUSH:      snprintf(out_buffer, out_buffer_capacity, "%.1f bit", value); return true;
-        case PARAM_DOWNSAMPLE: snprintf(out_buffer, out_buffer_capacity, "%.0fx", value); return true;
-        case PARAM_TONE:       snprintf(out_buffer, out_buffer_capacity, "%.0f %%", value * 100.0); return true;
-
-        case PARAM_OSC1_GAIN:
-        case PARAM_OSC2_GAIN:
-        case PARAM_OSC3_GAIN:
-            snprintf(out_buffer, out_buffer_capacity, "%.0f %%", value * 100.0);
-            return true;
-
-        case PARAM_OSC1_SEMI:
-        case PARAM_OSC2_SEMI:
-        case PARAM_OSC3_SEMI:
-            snprintf(out_buffer, out_buffer_capacity, "%+.0f st", value);
-            return true;
-
-        case PARAM_OSC1_MORPH:
-        case PARAM_OSC2_MORPH:
-        case PARAM_OSC3_MORPH: {
-            if (value < 0.1) snprintf(out_buffer, out_buffer_capacity, "Sine");
-            else if (value < 0.9) snprintf(out_buffer, out_buffer_capacity, "Sine->Tri");
-            else if (value < 1.1) snprintf(out_buffer, out_buffer_capacity, "Triangle");
-            else if (value < 1.9) snprintf(out_buffer, out_buffer_capacity, "Tri->Saw");
-            else if (value < 2.1) snprintf(out_buffer, out_buffer_capacity, "Saw");
-            else if (value < 2.9) snprintf(out_buffer, out_buffer_capacity, "Saw->Sqr");
-            else snprintf(out_buffer, out_buffer_capacity, "Square");
-            return true;
-        }
-
-        default: return false;
-    }
+    return params_value_to_text(param_id, value, out_buffer, out_buffer_capacity);
 }
 
 static bool plugin_params_text_to_value(const clap_plugin_t *plugin, clap_id param_id, const char *param_value_text, double *out_value) {
     (void)plugin; (void)param_id; (void)param_value_text; (void)out_value;
     return false;
-}
-
-static void apply_param_value(GranularSynth *synth, clap_id param_id, double value) {
-    switch (param_id) {
-        case PARAM_GRAIN_SIZE:
-            synth->grain_size = value;
-            granular_set_grain_size(&synth->engine, (float)value);
-            break;
-        case PARAM_DENSITY:
-            synth->density = value;
-            granular_set_density(&synth->engine, (float)value);
-            break;
-        case PARAM_SPRAY:
-            synth->spray = value;
-            granular_set_spray(&synth->engine, (float)value);
-            break;
-        case PARAM_ATTACK:
-            synth->attack = value;
-            granular_set_attack(&synth->engine, (float)value);
-            break;
-        case PARAM_DECAY:
-            synth->decay = value;
-            granular_set_decay(&synth->engine, (float)value);
-            break;
-        case PARAM_SUSTAIN:
-            synth->sustain = value;
-            granular_set_sustain(&synth->engine, (float)value);
-            break;
-        case PARAM_RELEASE:
-            synth->release = value;
-            granular_set_release(&synth->engine, (float)value);
-            break;
-        case PARAM_GAIN:
-            synth->gain = value;
-            granular_set_gain(&synth->engine, (float)value);
-            break;
-        case PARAM_CRUSH:
-            synth->crush = value;
-            granular_set_crush(&synth->engine, (float)value);
-            break;
-        case PARAM_DOWNSAMPLE:
-            synth->downsample = value;
-            granular_set_downsample(&synth->engine, (float)value);
-            break;
-        case PARAM_TONE:
-            synth->tone = value;
-            granular_set_tone(&synth->engine, (float)value);
-            break;
-
-        case PARAM_OSC1_GAIN:
-            synth->osc_gain[0] = value;
-            granular_set_osc_gain(&synth->engine, 0, (float)value);
-            break;
-        case PARAM_OSC1_SEMI:
-            synth->osc_semi[0] = value;
-            granular_set_osc_semi(&synth->engine, 0, (float)value);
-            break;
-        case PARAM_OSC1_MORPH:
-            synth->osc_morph[0] = value;
-            granular_set_osc_morph(&synth->engine, 0, (float)value);
-            break;
-
-        case PARAM_OSC2_GAIN:
-            synth->osc_gain[1] = value;
-            granular_set_osc_gain(&synth->engine, 1, (float)value);
-            break;
-        case PARAM_OSC2_SEMI:
-            synth->osc_semi[1] = value;
-            granular_set_osc_semi(&synth->engine, 1, (float)value);
-            break;
-        case PARAM_OSC2_MORPH:
-            synth->osc_morph[1] = value;
-            granular_set_osc_morph(&synth->engine, 1, (float)value);
-            break;
-
-        case PARAM_OSC3_GAIN:
-            synth->osc_gain[2] = value;
-            granular_set_osc_gain(&synth->engine, 2, (float)value);
-            break;
-        case PARAM_OSC3_SEMI:
-            synth->osc_semi[2] = value;
-            granular_set_osc_semi(&synth->engine, 2, (float)value);
-            break;
-        case PARAM_OSC3_MORPH:
-            synth->osc_morph[2] = value;
-            granular_set_osc_morph(&synth->engine, 2, (float)value);
-            break;
-    }
 }
 
 static void plugin_params_flush(const clap_plugin_t *plugin, const clap_input_events_t *in, const clap_output_events_t *out) {
@@ -496,7 +92,7 @@ static void plugin_params_flush(const clap_plugin_t *plugin, const clap_input_ev
 
         if (hdr->type == CLAP_EVENT_PARAM_VALUE) {
             const clap_event_param_value_t *ev = (const clap_event_param_value_t *)hdr;
-            apply_param_value(synth, ev->param_id, ev->value);
+            params_apply_value(synth, ev->param_id, ev->value);
         }
     }
 }
@@ -511,48 +107,13 @@ static const clap_plugin_params_t params_ext = {
 };
 
 static bool plugin_state_save(const clap_plugin_t *plugin, const clap_ostream_t *stream) {
-    if (!plugin || !plugin->plugin_data || !stream) return false;
-    GranularSynth *synth = (GranularSynth *)plugin->plugin_data;
-
-    double state_data[PARAM_COUNT] = {
-        synth->grain_size,
-        synth->density,
-        synth->spray,
-        synth->attack,
-        synth->decay,
-        synth->sustain,
-        synth->release,
-        synth->gain,
-        synth->crush,
-        synth->downsample,
-        synth->tone,
-        synth->osc_gain[0],
-        synth->osc_semi[0],
-        synth->osc_morph[0],
-        synth->osc_gain[1],
-        synth->osc_semi[1],
-        synth->osc_morph[1],
-        synth->osc_gain[2],
-        synth->osc_semi[2],
-        synth->osc_morph[2]
-    };
-    int64_t written = stream->write(stream, state_data, sizeof(state_data));
-    return written == sizeof(state_data);
+    if (!plugin || !plugin->plugin_data) return false;
+    return params_state_save((const GranularSynth *)plugin->plugin_data, stream);
 }
 
 static bool plugin_state_load(const clap_plugin_t *plugin, const clap_istream_t *stream) {
-    if (!plugin || !plugin->plugin_data || !stream) return false;
-    GranularSynth *synth = (GranularSynth *)plugin->plugin_data;
-
-    double state_data[PARAM_COUNT] = { 0 };
-    int64_t read = stream->read(stream, state_data, sizeof(state_data));
-    if (read == sizeof(state_data)) {
-        for (int i = 0; i < PARAM_COUNT; ++i) {
-            apply_param_value(synth, i, state_data[i]);
-        }
-        return true;
-    }
-    return false;
+    if (!plugin || !plugin->plugin_data) return false;
+    return params_state_load((GranularSynth *)plugin->plugin_data, stream);
 }
 
 static const clap_plugin_state_t state_ext = {
@@ -560,73 +121,27 @@ static const clap_plugin_state_t state_ext = {
     .load = plugin_state_load,
 };
 
-static bool plugin_init(const struct clap_plugin *plugin) {
-    (void)plugin;
-    return true; 
-}
+static bool plugin_init(const struct clap_plugin *plugin) { (void)plugin; return true; }
 
 static void plugin_destroy(const struct clap_plugin *plugin) {
     if (!plugin) return;
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
-    if (synth) {
-        free(synth);
-    }
+    if (synth) free(synth);
 }
 
-static bool plugin_activate(const struct clap_plugin *plugin,
-                            double sample_rate,
-                            uint32_t min_frames_count,
-                            uint32_t max_frames_count) {
-    (void)min_frames_count;
-    (void)max_frames_count;
+static bool plugin_activate(const struct clap_plugin *plugin, double sample_rate, uint32_t min_frames, uint32_t max_frames) {
+    (void)min_frames; (void)max_frames;
     if (!plugin || !plugin->plugin_data) return false;
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
-    
-    synth->grain_size = 65.0;
-    synth->density = 30.0;
-    synth->spray = 0.15;
-    synth->attack = 20.0;
-    synth->decay = 200.0;
-    synth->sustain = 0.75;
-    synth->release = 350.0;
-    synth->gain = 0.75;
-    synth->crush = 16.0;
-    synth->downsample = 1.0;
-    synth->tone = 0.50;
-
-    synth->osc_gain[0] = 0.80;
-    synth->osc_semi[0] = 0.0;
-    synth->osc_morph[0] = 0.0;
-
-    synth->osc_gain[1] = 0.45;
-    synth->osc_semi[1] = 12.0;
-    synth->osc_morph[1] = 1.0;
-
-    synth->osc_gain[2] = 0.35;
-    synth->osc_semi[2] = 7.0;
-    synth->osc_morph[2] = 2.0;
 
     granular_init(&synth->engine, sample_rate);
-    for (int i = 0; i < PARAM_COUNT; ++i) {
-        double val = 0.0;
-        plugin_params_get_value(plugin, i, &val);
-        apply_param_value(synth, i, val);
-    }
+    params_init_defaults(synth);
     return true;
 }
 
-static void plugin_deactivate(const struct clap_plugin *plugin) {
-    (void)plugin;
-}
-
-static bool plugin_start_processing(const struct clap_plugin *plugin) {
-    (void)plugin;
-    return true;
-}
-
-static void plugin_stop_processing(const struct clap_plugin *plugin) {
-    (void)plugin;
-}
+static void plugin_deactivate(const struct clap_plugin *plugin) { (void)plugin; }
+static bool plugin_start_processing(const struct clap_plugin *plugin) { (void)plugin; return true; }
+static void plugin_stop_processing(const struct clap_plugin *plugin) { (void)plugin; }
 
 static void plugin_reset(const struct clap_plugin *plugin) {
     if (!plugin || !plugin->plugin_data) return;
@@ -651,29 +166,25 @@ static void process_input_events(GranularSynth *synth, const clap_input_events_t
             granular_note_off(&synth->engine, note->key);
         } else if (hdr->type == CLAP_EVENT_PARAM_VALUE) {
             const clap_event_param_value_t *ev = (const clap_event_param_value_t *)hdr;
-            apply_param_value(synth, ev->param_id, ev->value);
+            params_apply_value(synth, ev->param_id, ev->value);
         } else if (hdr->type == CLAP_EVENT_MIDI) {
             const clap_event_midi_t *midi = (const clap_event_midi_t *)hdr;
-            uint8_t status = midi->data[0] & 0xF0;
-            if (status == 0xE0) {
+            if ((midi->data[0] & 0xF0) == 0xE0) {
                 int bend_raw = (midi->data[1] & 0x7F) | ((midi->data[2] & 0x7F) << 7);
-                float bend_semitones = ((float)(bend_raw - 8192) / 8192.0f) * 2.0f;
-                granular_set_pitch_bend(&synth->engine, bend_semitones);
+                float bend_semi = ((float)(bend_raw - 8192) / 8192.0f) * 2.0f;
+                granular_set_pitch_bend(&synth->engine, bend_semi);
             }
         }
     }
 }
 
-static clap_process_status plugin_process(const struct clap_plugin *plugin,
-                                          const clap_process_t *process) {
+static clap_process_status plugin_process(const struct clap_plugin *plugin, const clap_process_t *process) {
     if (!plugin || !plugin->plugin_data || !process) return CLAP_PROCESS_CONTINUE;
     GranularSynth* synth = (GranularSynth*)plugin->plugin_data;
 
     process_input_events(synth, process->in_events);
 
-    if (process->audio_outputs_count == 0) {
-        return CLAP_PROCESS_CONTINUE;
-    }
+    if (process->audio_outputs_count == 0) return CLAP_PROCESS_CONTINUE;
 
     const uint32_t frame_count = process->frames_count;
     const uint32_t out_channels = process->audio_outputs[0].channel_count;
@@ -684,7 +195,6 @@ static clap_process_status plugin_process(const struct clap_plugin *plugin,
     for (uint32_t i = 0; i < frame_count; ++i) {
         float sample_l = 0.0f;
         float sample_r = 0.0f;
-
         granular_render_sample(&synth->engine, &sample_l, &sample_r);
 
         if (out_l) out_l[i] = sample_l;
@@ -705,9 +215,7 @@ static const void* plugin_get_extension(const struct clap_plugin *plugin, const 
     return NULL;
 }
 
-static void plugin_on_main_thread(const struct clap_plugin *plugin) {
-    (void)plugin;
-}
+static void plugin_on_main_thread(const struct clap_plugin *plugin) { (void)plugin; }
 
 static const clap_plugin_t plugin_class = {
     .desc = NULL,
@@ -744,15 +252,9 @@ static const clap_plugin_descriptor_t plugin_descriptor = {
     .features = plugin_features
 };
 
-static uint32_t plugin_factory_get_plugin_count(const struct clap_plugin_factory *factory) {
-    (void)factory;
-    return 1;
-}
-
+static uint32_t plugin_factory_get_plugin_count(const struct clap_plugin_factory *factory) { (void)factory; return 1; }
 static const clap_plugin_descriptor_t* plugin_factory_get_plugin_descriptor(const struct clap_plugin_factory *factory, uint32_t index) {
-    (void)factory;
-    (void)index;
-    return &plugin_descriptor;
+    (void)factory; (void)index; return &plugin_descriptor;
 }
 
 static const clap_plugin_t* plugin_factory_create_plugin(const struct clap_plugin_factory *factory, const clap_host_t *host, const char *plugin_id) {
@@ -776,17 +278,10 @@ static const clap_plugin_factory_t plugin_factory = {
     .create_plugin = plugin_factory_create_plugin,
 };
 
-static bool entry_init(const char *plugin_path) {
-    (void)plugin_path;
-    return true;
-}
-
+static bool entry_init(const char *plugin_path) { (void)plugin_path; return true; }
 static void entry_deinit(void) {}
-
 static const void* entry_get_factory(const char *factory_id) {
-    if (strcmp(factory_id, CLAP_PLUGIN_FACTORY_ID) == 0) {
-        return &plugin_factory;
-    }
+    if (strcmp(factory_id, CLAP_PLUGIN_FACTORY_ID) == 0) return &plugin_factory;
     return NULL;
 }
 
