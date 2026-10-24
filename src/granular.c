@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #define PI 3.14159265358979323846
+#define BASE_ROOT_FREQ 110.0f
 
 static void init_hann_lut(GranularEngine *engine) {
     for (int i = 0; i < HANN_LUT_SIZE; ++i) {
@@ -38,7 +39,11 @@ void granular_init(GranularEngine *engine, double sample_rate) {
     engine->adsr_params.release_ms = 350.0f;
 
     engine->fx_params.gain = 0.75f;
-    engine->fx_params.tone = 0.50f;
+    engine->fx_params.cutoff_hz = 20000.0f;
+    engine->fx_params.resonance = 0.707f;
+    engine->fx_params.chorus_mix = 0.0f;
+    engine->fx_params.chorus_rate_hz = 1.2f;
+    engine->fx_params.chorus_depth_ms = 5.0f;
     engine->fx_params.crush_bits = 16.0f;
     engine->fx_params.downsample = 1.0f;
 
@@ -67,8 +72,7 @@ void granular_init(GranularEngine *engine, double sample_rate) {
 void granular_set_grain_size(GranularEngine *engine, float size_ms) { engine->grain_size_ms = size_ms; }
 void granular_set_density(GranularEngine *engine, float density) { engine->density = density; }
 void granular_set_spray(GranularEngine *engine, float spray) { engine->spray = spray; }
-void granular_set_gain(GranularEngine *engine, float gain) { engine->fx_params.gain = gain; }
-void granular_set_tone(GranularEngine *engine, float tone) { engine->fx_params.tone = (tone < 0.0f) ? 0.0f : ((tone > 1.0f) ? 1.0f : tone); }
+void granular_set_pitch_bend(GranularEngine *engine, float semitones) { engine->pitch_bend_semitones = semitones; }
 
 void granular_set_osc_gain(GranularEngine *engine, uint32_t osc_idx, float gain) { if (osc_idx < NUM_OSCS) engine->osc_gain[osc_idx] = gain; }
 void granular_set_osc_semi(GranularEngine *engine, uint32_t osc_idx, float semi) { if (osc_idx < NUM_OSCS) engine->osc_semi[osc_idx] = semi; }
@@ -80,9 +84,6 @@ void granular_set_attack(GranularEngine *engine, float attack_ms) { engine->adsr
 void granular_set_decay(GranularEngine *engine, float decay_ms) { engine->adsr_params.decay_ms = decay_ms; }
 void granular_set_sustain(GranularEngine *engine, float sustain) { engine->adsr_params.sustain = sustain; }
 void granular_set_release(GranularEngine *engine, float release_ms) { engine->adsr_params.release_ms = release_ms; }
-void granular_set_crush(GranularEngine *engine, float bits) { engine->fx_params.crush_bits = bits; }
-void granular_set_downsample(GranularEngine *engine, float factor) { engine->fx_params.downsample = factor; }
-void granular_set_pitch_bend(GranularEngine *engine, float semitones) { engine->pitch_bend_semitones = semitones; }
 
 void granular_note_on(GranularEngine *engine, int32_t key, float frequency) {
     int target_idx = -1;
@@ -209,7 +210,7 @@ void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) 
             while (grain->pos[o] >= (float)SAMPLE_BUFFER_SIZE) grain->pos[o] -= (float)SAMPLE_BUFFER_SIZE;
         }
 
-        float grain_amp = audio_val * env * grain->amp * 0.150f;
+        float grain_amp = audio_val * env * grain->amp * 0.150f; // Увеличенная громкость зерен
         mixed_l += grain_amp * (1.0f - grain->pan);
         mixed_r += grain_amp * grain->pan;
 
@@ -219,7 +220,7 @@ void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) 
         }
     }
 
-    fx_process(&engine->fx_state, &engine->fx_params, &mixed_l, &mixed_r);
+    fx_process(&engine->fx_state, &engine->fx_params, &mixed_l, &mixed_r, sr);
 
     *out_l = mixed_l;
     *out_r = mixed_r;
