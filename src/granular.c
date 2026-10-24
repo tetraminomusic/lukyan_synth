@@ -209,7 +209,7 @@ void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) 
             while (grain->pos[o] >= (float)SAMPLE_BUFFER_SIZE) grain->pos[o] -= (float)SAMPLE_BUFFER_SIZE;
         }
 
-        float grain_amp = audio_val * env * grain->amp * 0.030f;
+        float grain_amp = audio_val * env * grain->amp * 0.150f;
         mixed_l += grain_amp * (1.0f - grain->pan);
         mixed_r += grain_amp * grain->pan;
 
