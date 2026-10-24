@@ -17,12 +17,18 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(clap)
 
 add_library(granular_synth MODULE 
-    src/plugin.c
+    src/plugin.c 
+    src/ports.c
+    src/events.c
+    src/parameters.c
     src/granular.c
+    src/oscillator.c
+    src/adsr.c
+    src/fx.c
 )
 
 target_link_libraries(granular_synth PRIVATE clap)
-target_include_directories(granular_synth PRIVATE src)
+target_include_directories(granular_synth PRIVATE include src)
 
 set_target_properties(granular_synth PROPERTIES
     OUTPUT_NAME "Lukyan Synth"
