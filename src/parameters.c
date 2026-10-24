@@ -17,7 +17,7 @@ typedef struct {
 } ParamDef;
 
 static void fmt_ms(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.1f ms", val); }
-static void fmt_hz(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.0f Hz", val); }
+static void fmt_hz(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.1f Hz", val); }
 static void fmt_gr_s(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.1f gr/s", val); }
 static void fmt_norm(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.2f", val); }
 static void fmt_pct(double val, char *buf, uint32_t cap) { snprintf(buf, cap, "%.0f %%", val * 100.0); }
@@ -48,6 +48,12 @@ static void app_downsample(GranularEngine *e, double v) { e->fx_params.downsampl
 
 static void app_cutoff(GranularEngine *e, double v) { e->fx_params.cutoff_hz = (float)v; }
 static void app_resonance(GranularEngine *e, double v) { e->fx_params.resonance = (float)v; }
+
+static void app_phaser_mix(GranularEngine *e, double v) { e->fx_params.phaser_mix = (float)v; }
+static void app_phaser_rate(GranularEngine *e, double v) { e->fx_params.phaser_rate_hz = (float)v; }
+static void app_phaser_depth(GranularEngine *e, double v) { e->fx_params.phaser_depth = (float)v; }
+static void app_phaser_fb(GranularEngine *e, double v) { e->fx_params.phaser_feedback = (float)v; }
+
 static void app_chorus_mix(GranularEngine *e, double v) { e->fx_params.chorus_mix = (float)v; }
 static void app_chorus_rate(GranularEngine *e, double v) { e->fx_params.chorus_rate_hz = (float)v; }
 static void app_chorus_depth(GranularEngine *e, double v) { e->fx_params.chorus_depth_ms = (float)v; }
@@ -77,6 +83,12 @@ static const ParamDef DEFS[PARAM_COUNT] = {
     
     { PARAM_CUTOFF, "Filter Cutoff", 20.0, 20000.0, 20000.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_hz, app_cutoff },
     { PARAM_RESONANCE, "Filter Res", 0.1, 10.0, 0.707, CLAP_PARAM_IS_AUTOMATABLE, fmt_norm, app_resonance },
+    
+    { PARAM_PHASER_MIX, "Phaser Mix", 0.0, 1.0, 0.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_pct, app_phaser_mix },
+    { PARAM_PHASER_RATE, "Phaser Rate", 0.1, 5.0, 0.5, CLAP_PARAM_IS_AUTOMATABLE, fmt_hz, app_phaser_rate },
+    { PARAM_PHASER_DEPTH, "Phaser Depth", 0.0, 1.0, 0.8, CLAP_PARAM_IS_AUTOMATABLE, fmt_pct, app_phaser_depth },
+    { PARAM_PHASER_FEEDBACK, "Phaser Fbk", 0.0, 0.9, 0.5, CLAP_PARAM_IS_AUTOMATABLE, fmt_pct, app_phaser_fb },
+
     { PARAM_CHORUS_MIX, "Chorus Mix", 0.0, 1.0, 0.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_pct, app_chorus_mix },
     { PARAM_CHORUS_RATE, "Chorus Rate", 0.1, 5.0, 1.2, CLAP_PARAM_IS_AUTOMATABLE, fmt_hz, app_chorus_rate },
     { PARAM_CHORUS_DEPTH, "Chorus Depth", 0.0, 20.0, 5.0, CLAP_PARAM_IS_AUTOMATABLE, fmt_ms, app_chorus_depth },
