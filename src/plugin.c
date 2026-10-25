@@ -102,6 +102,7 @@ static const void* plugin_get_extension(const struct clap_plugin *plugin, const 
     if (strcmp(id, CLAP_EXT_NOTE_PORTS) == 0) return &g_note_ports;
     if (strcmp(id, CLAP_EXT_PARAMS) == 0) return &params_ext;
     if (strcmp(id, CLAP_EXT_STATE) == 0) return &state_ext;
+    if (strcmp(id, CLAP_EXT_GUI) == 0) return &g_gui_extension;
     return NULL;
 }
 

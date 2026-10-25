@@ -3,6 +3,7 @@
 
 #include <clap/clap.h>
 #include "granular.h"
+#include "gui.h"
 
 typedef enum {
     PARAM_GRAIN_SIZE = 0,
@@ -44,6 +45,7 @@ typedef struct GranularSynth {
     const clap_host_t *host;
     double values[PARAM_COUNT];
     GranularEngine engine;
+    GuiState gui;
 } GranularSynth;
 
 uint32_t params_get_count(void);

@@ -18,6 +18,7 @@ FetchContent_MakeAvailable(clap)
 
 add_library(granular_synth MODULE 
     src/plugin.c 
+    src/gui.c
     src/ports.c
     src/events.c
     src/parameters.c
@@ -29,6 +30,10 @@ add_library(granular_synth MODULE
 
 target_link_libraries(granular_synth PRIVATE clap)
 target_include_directories(granular_synth PRIVATE include src)
+
+if(APPLE)
+    target_link_libraries(granular_synth PRIVATE "-framework Cocoa" "-framework CoreGraphics")
+endif()
 
 set_target_properties(granular_synth PROPERTIES
     OUTPUT_NAME "Lukyan Synth"
