@@ -1,246 +1,200 @@
-#include "granular.h"
+#include "fx.h"
 #include <math.h>
-#include <stdlib.h>
 
 #define PI 3.14159265358979323846
-#define BASE_ROOT_FREQ 110.0f
 
-static void init_hann_lut(GranularEngine *engine) {
-    for (int i = 0; i < HANN_LUT_SIZE; ++i) {
-        engine->hann_lut[i] = 0.5f * (1.0f - cosf((2.0f * (float)PI * (float)i) / (float)(HANN_LUT_SIZE - 1)));
+static const int COMB_TUNINGS_L[NUM_COMB] = { 1116, 1188, 1277, 1356 };
+static const int COMB_TUNINGS_R[NUM_COMB] = { 1139, 1211, 1300, 1379 };
+static const int APF_TUNINGS_L[NUM_APF] = { 556, 441 };
+static const int APF_TUNINGS_R[NUM_APF] = { 579, 464 };
+
+void fx_state_init(FxState *state) {
+    state->ds_counter = 0.0f;
+    state->held_sample_l = 0.0f;
+    state->held_sample_r = 0.0f;
+    
+    state->ic1eq_l = 0.0f; state->ic2eq_l = 0.0f;
+    state->ic1eq_r = 0.0f; state->ic2eq_r = 0.0f;
+    
+    state->phaser_lfo_phase = 0.0f;
+    for (int i = 0; i < 4; ++i) {
+        state->phaser_x_l[i] = 0.0f; state->phaser_y_l[i] = 0.0f;
+        state->phaser_x_r[i] = 0.0f; state->phaser_y_r[i] = 0.0f;
     }
-}
 
-void granular_init(GranularEngine *engine, double sample_rate) {
-    engine->sample_rate = sample_rate;
-    engine->playhead = 0.0f;
-    engine->next_voice_rr = 0;
+    state->write_pos = 0;
+    state->chorus_lfo_phase = 0.0f;
+    for (int i = 0; i < CHORUS_BUFFER_SIZE; ++i) {
+        state->chorus_buf_l[i] = 0.0f;
+        state->chorus_buf_r[i] = 0.0f;
+    }
 
-    engine->grain_size_ms = 65.0f;
-    engine->density = 30.0f;
-    engine->spray = 0.15f;
-    engine->pitch_bend_semitones = 0.0f;
-
-    engine->osc_gain[0] = 0.80f;
-    engine->osc_semi[0] = 0.0f;
-    engine->osc_morph[0] = 0.0f;
-
-    engine->osc_gain[1] = 0.45f;
-    engine->osc_semi[1] = 12.0f;
-    engine->osc_morph[1] = 1.0f;
-
-    engine->osc_gain[2] = 0.35f;
-    engine->osc_semi[2] = 7.0f;
-    engine->osc_morph[2] = 2.0f;
-
-    engine->adsr_params.attack_ms = 20.0f;
-    engine->adsr_params.decay_ms = 200.0f;
-    engine->adsr_params.sustain = 0.75f;
-    engine->adsr_params.release_ms = 350.0f;
-
-    engine->fx_params.gain = 0.75f;
-    engine->fx_params.cutoff_hz = 20000.0f;
-    engine->fx_params.resonance = 0.707f;
-    engine->fx_params.phaser_mix = 0.0f;
-    engine->fx_params.phaser_rate_hz = 0.5f;
-    engine->fx_params.phaser_depth = 0.8f;
-    engine->fx_params.phaser_feedback = 0.5f;
-    engine->fx_params.chorus_mix = 0.0f;
-    engine->fx_params.chorus_rate_hz = 1.2f;
-    engine->fx_params.chorus_depth_ms = 5.0f;
-    engine->fx_params.reverb_mix = 0.0f;
-    engine->fx_params.reverb_size = 0.75f;
-    engine->fx_params.reverb_damp = 0.25f;
-    engine->fx_params.crush_bits = 16.0f;
-    engine->fx_params.downsample = 1.0f;
-
-    fx_state_init(&engine->fx_state);
-    init_hann_lut(engine);
-    oscillator_init_buffers(sample_rate);
-
-    for (int i = 0; i < MAX_GRAINS; ++i) {
-        engine->grains[i].active = false;
-        engine->grains[i].amp = 1.0f;
-        for (int o = 0; o < NUM_OSCS; ++o) {
-            engine->grains[i].pos[o] = 0.0f;
-            engine->grains[i].speed[o] = 1.0f;
+    for (int c = 0; c < NUM_COMB; ++c) {
+        state->comb_pos_l[c] = 0; state->comb_pos_r[c] = 0;
+        state->comb_filter_l[c] = 0.0f; state->comb_filter_r[c] = 0.0f;
+        for (int i = 0; i < 2000; ++i) {
+            state->comb_buf_l[c][i] = 0.0f;
+            state->comb_buf_r[c][i] = 0.0f;
         }
     }
 
-    for (int v = 0; v < MAX_VOICES; ++v) {
-        engine->voices[v].active = false;
-        engine->voices[v].key = -1;
-        engine->voices[v].frequency = 440.0f;
-        engine->voices[v].spawn_timer = 0.0f;
-        adsr_voice_init(&engine->voices[v].adsr);
-    }
-}
-
-void granular_set_grain_size(GranularEngine *engine, float size_ms) { engine->grain_size_ms = size_ms; }
-void granular_set_density(GranularEngine *engine, float density) { engine->density = density; }
-void granular_set_spray(GranularEngine *engine, float spray) { engine->spray = spray; }
-void granular_set_pitch_bend(GranularEngine *engine, float semitones) { engine->pitch_bend_semitones = semitones; }
-
-void granular_set_osc_gain(GranularEngine *engine, uint32_t osc_idx, float gain) { if (osc_idx < NUM_OSCS) engine->osc_gain[osc_idx] = gain; }
-void granular_set_osc_semi(GranularEngine *engine, uint32_t osc_idx, float semi) { if (osc_idx < NUM_OSCS) engine->osc_semi[osc_idx] = semi; }
-void granular_set_osc_morph(GranularEngine *engine, uint32_t osc_idx, float morph) {
-    if (osc_idx < NUM_OSCS) engine->osc_morph[osc_idx] = (morph < 0.0f) ? 0.0f : ((morph > 3.0f) ? 3.0f : morph);
-}
-
-void granular_set_attack(GranularEngine *engine, float attack_ms) { engine->adsr_params.attack_ms = attack_ms; }
-void granular_set_decay(GranularEngine *engine, float decay_ms) { engine->adsr_params.decay_ms = decay_ms; }
-void granular_set_sustain(GranularEngine *engine, float sustain) { engine->adsr_params.sustain = sustain; }
-void granular_set_release(GranularEngine *engine, float release_ms) { engine->adsr_params.release_ms = release_ms; }
-
-void granular_note_on(GranularEngine *engine, int32_t key, float frequency) {
-    int target_idx = -1;
-    for (int v = 0; v < MAX_VOICES; ++v) {
-        if (!engine->voices[v].active) {
-            target_idx = v;
-            break;
-        }
-    }
-    if (target_idx == -1) {
-        target_idx = engine->next_voice_rr;
-        engine->next_voice_rr = (engine->next_voice_rr + 1) % MAX_VOICES;
-    }
-
-    engine->voices[target_idx].active = true;
-    engine->voices[target_idx].key = key;
-    engine->voices[target_idx].frequency = frequency;
-    engine->voices[target_idx].spawn_timer = 0.0f;
-    adsr_voice_gate_on(&engine->voices[target_idx].adsr);
-}
-
-void granular_note_off(GranularEngine *engine, int32_t key) {
-    for (int v = 0; v < MAX_VOICES; ++v) {
-        if (engine->voices[v].active && engine->voices[v].key == key) {
-            adsr_voice_gate_off(&engine->voices[v].adsr);
+    for (int a = 0; a < NUM_APF; ++a) {
+        state->apf_pos_l[a] = 0; state->apf_pos_r[a] = 0;
+        for (int i = 0; i < 600; ++i) {
+            state->apf_buf_l[a][i] = 0.0f;
+            state->apf_buf_r[a][i] = 0.0f;
         }
     }
 }
 
-void granular_reset(GranularEngine *engine) {
-    for (int v = 0; v < MAX_VOICES; ++v) {
-        engine->voices[v].active = false;
-        engine->voices[v].key = -1;
-        engine->voices[v].spawn_timer = 0.0f;
-        adsr_voice_init(&engine->voices[v].adsr);
-    }
-    for (int i = 0; i < MAX_GRAINS; ++i) {
-        engine->grains[i].active = false;
-    }
-    engine->playhead = 0.0f;
-    engine->next_voice_rr = 0;
-    engine->pitch_bend_semitones = 0.0f;
-    fx_state_init(&engine->fx_state);
+static float read_delay(const float *buffer, float read_pos) {
+    int idx1 = (int)read_pos;
+    int idx2 = (idx1 + 1) % CHORUS_BUFFER_SIZE;
+    float frac = read_pos - (float)idx1;
+    return buffer[idx1] * (1.0f - frac) + buffer[idx2] * frac;
 }
 
-static void spawn_grain(GranularEngine *engine, float frequency, float amp) {
-    for (int i = 0; i < MAX_GRAINS; ++i) {
-        if (!engine->grains[i].active) {
-            engine->grains[i].active = true;
+void fx_process(FxState *state, const FxParams *params, float *out_l, float *out_r, float sample_rate) {
+    float sr = (sample_rate > 0.0f) ? sample_rate : 44100.0f;
 
-            float max_jitter = 6000.0f * engine->spray;
-            float jitter = ((float)(rand() % 2000) / 1000.0f - 1.0f) * max_jitter;
-            float start_pos = engine->playhead + jitter;
-            while (start_pos < 0.0f) start_pos += (float)SAMPLE_BUFFER_SIZE;
-            while (start_pos >= (float)SAMPLE_BUFFER_SIZE) start_pos -= (float)SAMPLE_BUFFER_SIZE;
+    float raw_l = tanhf(*out_l * 2.0f) * 0.95f * params->gain;
+    float raw_r = tanhf(*out_r * 2.0f) * 0.95f * params->gain;
 
-            float bent_freq = frequency * powf(2.0f, engine->pitch_bend_semitones / 12.0f);
-            float base_spd = bent_freq / BASE_ROOT_FREQ;
-
-            for (int o = 0; o < NUM_OSCS; ++o) {
-                float osc_ratio = powf(2.0f, engine->osc_semi[o] / 12.0f);
-                engine->grains[i].pos[o] = start_pos;
-                engine->grains[i].speed[o] = base_spd * osc_ratio;
-            }
-
-            engine->grains[i].length = (float)engine->sample_rate * (engine->grain_size_ms / 1000.0f);
-            engine->grains[i].progress = 0.0f;
-            engine->grains[i].pan = (float)(rand() % 1000) / 1000.0f;
-            engine->grains[i].amp = amp;
-            break;
+    if (params->downsample > 1.05f) {
+        state->ds_counter += 1.0f;
+        if (state->ds_counter >= params->downsample) {
+            state->ds_counter -= params->downsample;
+            state->held_sample_l = raw_l;
+            state->held_sample_r = raw_r;
         }
+        raw_l = state->held_sample_l;
+        raw_r = state->held_sample_r;
     }
-}
-
-void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) {
-    const float sr = (engine->sample_rate > 0.0) ? (float)engine->sample_rate : 44100.0f;
-    const float spawn_interval = (engine->density > 0.0f) ? (sr / engine->density) : 1000.0f;
-
-    for (int v = 0; v < MAX_VOICES; ++v) {
-        if (!engine->voices[v].active) continue;
-
-        Voice *voice = &engine->voices[v];
-        adsr_voice_process(&voice->adsr, &engine->adsr_params, sr);
-
-        if (voice->adsr.state == ADSR_IDLE) {
-            voice->active = false;
-            voice->key = -1;
-            continue;
-        }
-
-        if (voice->adsr.value > 0.0f) {
-            voice->spawn_timer += 1.0f;
-            if (voice->spawn_timer >= spawn_interval) {
-                voice->spawn_timer = 0.0f;
-                spawn_grain(engine, voice->frequency, voice->adsr.value);
-            }
-        }
+    if (params->crush_bits < 15.9f) {
+        float levels = powf(2.0f, params->crush_bits);
+        raw_l = roundf(raw_l * levels) / levels;
+        raw_r = roundf(raw_r * levels) / levels;
     }
 
-    engine->playhead += 0.5f;
-    if (engine->playhead >= (float)SAMPLE_BUFFER_SIZE) {
-        engine->playhead -= (float)SAMPLE_BUFFER_SIZE;
+    float g = tanf(PI * params->cutoff_hz / sr);
+    float k = 1.0f / params->resonance;
+    float a1 = 1.0f / (1.0f + g * (g + k));
+    float a2 = g * a1;
+    float a3 = g * a2;
+
+    float v3_l = raw_l - state->ic2eq_l;
+    float v1_l = a1 * state->ic1eq_l + a2 * v3_l;
+    float v2_l = state->ic2eq_l + a2 * state->ic1eq_l + a3 * v3_l;
+    state->ic1eq_l = 2.0f * v1_l - state->ic1eq_l;
+    state->ic2eq_l = 2.0f * v2_l - state->ic2eq_l;
+
+    float v3_r = raw_r - state->ic2eq_r;
+    float v1_r = a1 * state->ic1eq_r + a2 * v3_r;
+    float v2_r = state->ic2eq_r + a2 * state->ic1eq_r + a3 * v3_r;
+    state->ic1eq_r = 2.0f * v1_r - state->ic1eq_r;
+    state->ic2eq_r = 2.0f * v2_r - state->ic2eq_r;
+
+    float filtered_l = v2_l;
+    float filtered_r = v2_r;
+
+    state->phaser_lfo_phase += (2.0f * (float)PI * params->phaser_rate_hz) / sr;
+    if (state->phaser_lfo_phase > 2.0f * PI) state->phaser_lfo_phase -= 2.0f * PI;
+
+    float ph_lfo_l = (sinf(state->phaser_lfo_phase) + 1.0f) * 0.5f;
+    float ph_lfo_r = (sinf(state->phaser_lfo_phase + PI * 0.5f) + 1.0f) * 0.5f;
+
+    float sweep_l = 400.0f + (4000.0f - 400.0f) * ph_lfo_l * params->phaser_depth;
+    float sweep_r = 400.0f + (4000.0f - 400.0f) * ph_lfo_r * params->phaser_depth;
+
+    float apf_a_l = (tanf(PI * sweep_l / sr) - 1.0f) / (tanf(PI * sweep_l / sr) + 1.0f);
+    float apf_a_r = (tanf(PI * sweep_r / sr) - 1.0f) / (tanf(PI * sweep_r / sr) + 1.0f);
+
+    float p_in_l = filtered_l + state->phaser_y_l[3] * params->phaser_feedback;
+    for (int i = 0; i < 4; ++i) {
+        float out = apf_a_l * p_in_l + state->phaser_x_l[i] - apf_a_l * state->phaser_y_l[i];
+        state->phaser_x_l[i] = p_in_l;
+        state->phaser_y_l[i] = out;
+        p_in_l = out;
+    }
+    float phaser_out_l = filtered_l * (1.0f - params->phaser_mix) + p_in_l * params->phaser_mix;
+
+    float p_in_r = filtered_r + state->phaser_y_r[3] * params->phaser_feedback;
+    for (int i = 0; i < 4; ++i) {
+        float out = apf_a_r * p_in_r + state->phaser_x_r[i] - apf_a_r * state->phaser_y_r[i];
+        state->phaser_x_r[i] = p_in_r;
+        state->phaser_y_r[i] = out;
+        p_in_r = out;
+    }
+    float phaser_out_r = filtered_r * (1.0f - params->phaser_mix) + p_in_r * params->phaser_mix;
+
+    state->chorus_buf_l[state->write_pos] = phaser_out_l;
+    state->chorus_buf_r[state->write_pos] = phaser_out_r;
+
+    state->chorus_lfo_phase += (2.0f * (float)PI * params->chorus_rate_hz) / sr;
+    if (state->chorus_lfo_phase > 2.0f * PI) state->chorus_lfo_phase -= 2.0f * PI;
+
+    float ch_lfo_l = sinf(state->chorus_lfo_phase);
+    float ch_lfo_r = sinf(state->chorus_lfo_phase + PI * 0.5f);
+
+    float base_delay_samples = 0.015f * sr; 
+    float mod_samples = (params->chorus_depth_ms / 1000.0f) * sr;
+
+    float delay_l = base_delay_samples + ch_lfo_l * mod_samples;
+    float delay_r = base_delay_samples + ch_lfo_r * mod_samples;
+
+    float read_pos_l = (float)state->write_pos - delay_l;
+    while (read_pos_l < 0.0f) read_pos_l += CHORUS_BUFFER_SIZE;
+    
+    float read_pos_r = (float)state->write_pos - delay_r;
+    while (read_pos_r < 0.0f) read_pos_r += CHORUS_BUFFER_SIZE;
+
+    float chorus_l = read_delay(state->chorus_buf_l, read_pos_l);
+    float chorus_r = read_delay(state->chorus_buf_r, read_pos_r);
+
+    state->write_pos = (state->write_pos + 1) % CHORUS_BUFFER_SIZE;
+
+    float dry_rev_l = phaser_out_l * (1.0f - params->chorus_mix) + chorus_l * params->chorus_mix;
+    float dry_rev_r = phaser_out_r * (1.0f - params->chorus_mix) + chorus_r * params->chorus_mix;
+
+    float rev_in = (dry_rev_l + dry_rev_r) * 0.015f;
+    float comb_sum_l = 0.0f;
+    float comb_sum_r = 0.0f;
+
+    for (int c = 0; c < NUM_COMB; ++c) {
+        int size_l = COMB_TUNINGS_L[c];
+        float out_c_l = state->comb_buf_l[c][state->comb_pos_l[c]];
+        state->comb_filter_l[c] = out_c_l * (1.0f - params->reverb_damp) + state->comb_filter_l[c] * params->reverb_damp;
+        state->comb_buf_l[c][state->comb_pos_l[c]] = rev_in + state->comb_filter_l[c] * params->reverb_size;
+        state->comb_pos_l[c] = (state->comb_pos_l[c] + 1) % size_l;
+        comb_sum_l += out_c_l;
+
+        int size_r = COMB_TUNINGS_R[c];
+        float out_c_r = state->comb_buf_r[c][state->comb_pos_r[c]];
+        state->comb_filter_r[c] = out_c_r * (1.0f - params->reverb_damp) + state->comb_filter_r[c] * params->reverb_damp;
+        state->comb_buf_r[c][state->comb_pos_r[c]] = rev_in + state->comb_filter_r[c] * params->reverb_size;
+        state->comb_pos_r[c] = (state->comb_pos_r[c] + 1) % size_r;
+        comb_sum_r += out_c_r;
     }
 
-    float mixed_l = 0.0f;
-    float mixed_r = 0.0f;
+    float apf_l = comb_sum_l;
+    float apf_r = comb_sum_r;
 
-    for (int g = 0; g < MAX_GRAINS; ++g) {
-        if (!engine->grains[g].active) continue;
+    for (int a = 0; a < NUM_APF; ++a) {
+        int size_l = APF_TUNINGS_L[a];
+        float buf_out_l = state->apf_buf_l[a][state->apf_pos_l[a]];
+        float new_apf_l = -0.5f * apf_l + buf_out_l;
+        state->apf_buf_l[a][state->apf_pos_l[a]] = apf_l + 0.5f * buf_out_l;
+        state->apf_pos_l[a] = (state->apf_pos_l[a] + 1) % size_l;
+        apf_l = new_apf_l;
 
-        Grain *grain = &engine->grains[g];
-
-        float win_norm = grain->progress / grain->length;
-        int lut_idx = (int)(win_norm * (float)(HANN_LUT_SIZE - 1));
-        if (lut_idx >= HANN_LUT_SIZE) lut_idx = HANN_LUT_SIZE - 1;
-        float env = engine->hann_lut[lut_idx];
-
-        float audio_val = 0.0f;
-        for (int o = 0; o < NUM_OSCS; ++o) {
-            if (engine->osc_gain[o] > 0.001f) {
-                audio_val += oscillator_read_morphed(grain->pos[o], engine->osc_morph[o]) * engine->osc_gain[o];
-            }
-            grain->pos[o] += grain->speed[o];
-            while (grain->pos[o] >= (float)SAMPLE_BUFFER_SIZE) grain->pos[o] -= (float)SAMPLE_BUFFER_SIZE;
-        }
-
-        float grain_amp = audio_val * env * grain->amp * 0.150f;
-        mixed_l += grain_amp * (1.0f - grain->pan);
-        mixed_r += grain_amp * grain->pan;
-
-        grain->progress += 1.0f;
-        if (grain->progress >= grain->length) {
-            grain->active = false;
-        }
+        int size_r = APF_TUNINGS_R[a];
+        float buf_out_r = state->apf_buf_r[a][state->apf_pos_r[a]];
+        float new_apf_r = -0.5f * apf_r + buf_out_r;
+        state->apf_buf_r[a][state->apf_pos_r[a]] = apf_r + 0.5f * buf_out_r;
+        state->apf_pos_r[a] = (state->apf_pos_r[a] + 1) % size_r;
+        apf_r = new_apf_r;
     }
 
-    fx_process(&engine->fx_state, &engine->fx_params, &mixed_l, &mixed_r, sr);
-
-    *out_l = mixed_l;
-    *out_r = mixed_r;
-}
-
-void granular_render_block(GranularEngine *engine, float *out_l, float *out_r, uint32_t frames) {
-    for (uint32_t i = 0; i < frames; ++i) {
-        float sample_l = 0.0f;
-        float sample_r = 0.0f;
-
-        granular_render_sample(engine, &sample_l, &sample_r);
-
-        if (out_l) out_l[i] = sample_l;
-        if (out_r) out_r[i] = sample_r;
-    }
+    *out_l = dry_rev_l * (1.0f - params->reverb_mix) + apf_l * params->reverb_mix * 3.5f;
+    *out_r = dry_rev_r * (1.0f - params->reverb_mix) + apf_r * params->reverb_mix * 3.5f;
 }
