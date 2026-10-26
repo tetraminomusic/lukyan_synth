@@ -27,12 +27,15 @@ typedef struct GuiState {
     double drag_start_val;
 } GuiState;
 
+struct GranularSynth;
+typedef struct GranularSynth GranularSynth;
+
 extern const clap_plugin_gui_t g_gui_extension;
 
 void gui_init(GuiState *gui);
-void gui_render_frame(struct GranularSynth *synth);
-void gui_handle_mouse_down(struct GranularSynth *synth, float mx, float my);
-void gui_handle_mouse_drag(struct GranularSynth *synth, float mx, float my);
-void gui_handle_mouse_up(struct GranularSynth *synth);
+void gui_render_frame(GranularSynth *synth);
+void gui_handle_mouse_down(GranularSynth *synth, float mx, float my);
+void gui_handle_mouse_drag(GranularSynth *synth, float mx, float my);
+void gui_handle_mouse_up(GranularSynth *synth);
 
 #endif
