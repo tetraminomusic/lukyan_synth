@@ -19,6 +19,7 @@ FetchContent_MakeAvailable(clap)
 add_library(granular_synth MODULE 
     src/plugin.c 
     src/gui.c
+    src/gui_draw.c
     src/ports.c
     src/events.c
     src/parameters.c
