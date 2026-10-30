@@ -21,6 +21,7 @@ typedef struct {
     int cx;
     int cy;
     int r;
+    const char *label;
 } KnobLayout;
 
 void gui_init(GuiState *gui) {
@@ -41,9 +42,9 @@ void gui_init(GuiState *gui) {
                 int src_y = (y * img_h) / FB_HEIGHT;
                 int idx = (src_y * img_w + src_x) * 4;
 
-                uint8_t r = (uint8_t)(data[idx] * 0.50f);
-                uint8_t g = (uint8_t)(data[idx + 1] * 0.50f);
-                uint8_t b = (uint8_t)(data[idx + 2] * 0.50f);
+                uint8_t r = (uint8_t)(data[idx] * 0.45f);
+                uint8_t g = (uint8_t)(data[idx + 1] * 0.45f);
+                uint8_t b = (uint8_t)(data[idx + 2] * 0.45f);
 
                 gui->bg_pixels[y * FB_WIDTH + x] = (0xFF << 24) | (r << 16) | (g << 8) | b;
             }
@@ -75,12 +76,12 @@ static void draw_tab_osc(GranularSynth *synth) {
     draw_text(px, 420, 315, "ADSR ENVELOPE & MASTER", 0xFFE06C75);
 
     static const KnobLayout KNOBS_OSC[] = {
-        { PARAM_OSC1_GAIN, 65, 140, 20 }, { PARAM_OSC1_SEMI, 137, 140, 20 }, { PARAM_OSC1_MORPH, 210, 140, 20 },
-        { PARAM_OSC2_GAIN, 325, 140, 20 }, { PARAM_OSC2_SEMI, 397, 140, 20 }, { PARAM_OSC2_MORPH, 470, 140, 20 },
-        { PARAM_OSC3_GAIN, 585, 140, 20 }, { PARAM_OSC3_SEMI, 660, 140, 20 }, { PARAM_OSC3_MORPH, 735, 140, 20 },
-        { PARAM_GRAIN_SIZE, 75, 385, 22 }, { PARAM_DENSITY, 195, 385, 22 }, { PARAM_SPRAY, 315, 385, 22 },
-        { PARAM_ATTACK, 460, 370, 18 }, { PARAM_DECAY, 525, 370, 18 }, { PARAM_SUSTAIN, 590, 370, 18 },
-        { PARAM_RELEASE, 655, 370, 18 }, { PARAM_GAIN, 730, 370, 18 }
+        { PARAM_OSC1_GAIN, 65, 140, 20, "Gain" }, { PARAM_OSC1_SEMI, 137, 140, 20, "Semi" }, { PARAM_OSC1_MORPH, 210, 140, 20, "Morph" },
+        { PARAM_OSC2_GAIN, 325, 140, 20, "Gain" }, { PARAM_OSC2_SEMI, 397, 140, 20, "Semi" }, { PARAM_OSC2_MORPH, 470, 140, 20, "Morph" },
+        { PARAM_OSC3_GAIN, 585, 140, 20, "Gain" }, { PARAM_OSC3_SEMI, 660, 140, 20, "Semi" }, { PARAM_OSC3_MORPH, 735, 140, 20, "Morph" },
+        { PARAM_GRAIN_SIZE, 75, 385, 22, "Size" }, { PARAM_DENSITY, 195, 385, 22, "Density" }, { PARAM_SPRAY, 315, 385, 22, "Spray" },
+        { PARAM_ATTACK, 460, 370, 18, "Attack" }, { PARAM_DECAY, 525, 370, 18, "Decay" }, { PARAM_SUSTAIN, 590, 370, 18, "Sustain" },
+        { PARAM_RELEASE, 655, 370, 18, "Release" }, { PARAM_GAIN, 730, 370, 18, "Master" }
     };
 
     for (size_t i = 0; i < sizeof(KNOBS_OSC) / sizeof(KNOBS_OSC[0]); ++i) {
@@ -95,7 +96,7 @@ static void draw_tab_osc(GranularSynth *synth) {
         char val_str[32];
         params_value_to_text(id, val, val_str, sizeof(val_str));
 
-        draw_knob(px, KNOBS_OSC[i].cx, KNOBS_OSC[i].cy, KNOBS_OSC[i].r, norm, info.name, val_str, synth->gui.active_param_id == id);
+        draw_knob(px, KNOBS_OSC[i].cx, KNOBS_OSC[i].cy, KNOBS_OSC[i].r, norm, KNOBS_OSC[i].label, val_str, synth->gui.active_param_id == id);
     }
 }
 
@@ -118,12 +119,16 @@ static void draw_tab_fx(GranularSynth *synth) {
     draw_text(px, 420, 290, "SCHROEDER REVERB", 0xFFC678DD);
 
     static const KnobLayout KNOBS_FX[] = {
-        { PARAM_CUTOFF, 80, 145, 22 }, { PARAM_RESONANCE, 190, 145, 22 },
-        { PARAM_CRUSH, 340, 145, 22 }, { PARAM_DOWNSAMPLE, 450, 145, 22 },
-        { PARAM_PHASER_MIX, 575, 130, 17 }, { PARAM_PHASER_RATE, 635, 130, 17 },
-        { PARAM_PHASER_DEPTH, 695, 130, 17 }, { PARAM_PHASER_FEEDBACK, 755, 130, 17 },
-        { PARAM_CHORUS_MIX, 80, 370, 22 }, { PARAM_CHORUS_RATE, 195, 370, 22 }, { PARAM_CHORUS_DEPTH, 310, 370, 22 },
-        { PARAM_REVERB_MIX, 480, 370, 22 }, { PARAM_REVERB_SIZE, 595, 370, 22 }, { PARAM_REVERB_DAMP, 710, 370, 22 }
+        { PARAM_CUTOFF, 80, 145, 22, "Cutoff" }, { PARAM_RESONANCE, 190, 145, 22, "Res" },
+        { PARAM_CRUSH, 340, 145, 22, "Bits" }, { PARAM_DOWNSAMPLE, 450, 145, 22, "Rate" },
+        
+        { PARAM_PHASER_MIX, 568, 135, 17, "Mix" },
+        { PARAM_PHASER_RATE, 626, 135, 17, "Rate" },
+        { PARAM_PHASER_DEPTH, 684, 135, 17, "Depth" },
+        { PARAM_PHASER_FEEDBACK, 742, 135, 17, "Fbk" },
+
+        { PARAM_CHORUS_MIX, 80, 370, 22, "Mix" }, { PARAM_CHORUS_RATE, 195, 370, 22, "Rate" }, { PARAM_CHORUS_DEPTH, 310, 370, 22, "Depth" },
+        { PARAM_REVERB_MIX, 480, 370, 22, "Mix" }, { PARAM_REVERB_SIZE, 595, 370, 22, "Size" }, { PARAM_REVERB_DAMP, 710, 370, 22, "Damp" }
     };
 
     for (size_t i = 0; i < sizeof(KNOBS_FX) / sizeof(KNOBS_FX[0]); ++i) {
@@ -138,7 +143,7 @@ static void draw_tab_fx(GranularSynth *synth) {
         char val_str[32];
         params_value_to_text(id, val, val_str, sizeof(val_str));
 
-        draw_knob(px, KNOBS_FX[i].cx, KNOBS_FX[i].cy, KNOBS_FX[i].r, norm, info.name, val_str, synth->gui.active_param_id == id);
+        draw_knob(px, KNOBS_FX[i].cx, KNOBS_FX[i].cy, KNOBS_FX[i].r, norm, KNOBS_FX[i].label, val_str, synth->gui.active_param_id == id);
     }
 }
 
@@ -198,12 +203,12 @@ void gui_handle_mouse_down(GranularSynth *synth, float mx, float my) {
 
     if (synth->gui.current_tab == TAB_OSC) {
         static const KnobLayout KNOBS_OSC[] = {
-            { PARAM_OSC1_GAIN, 65, 140, 20 }, { PARAM_OSC1_SEMI, 137, 140, 20 }, { PARAM_OSC1_MORPH, 210, 140, 20 },
-            { PARAM_OSC2_GAIN, 325, 140, 20 }, { PARAM_OSC2_SEMI, 397, 140, 20 }, { PARAM_OSC2_MORPH, 470, 140, 20 },
-            { PARAM_OSC3_GAIN, 585, 140, 20 }, { PARAM_OSC3_SEMI, 660, 140, 20 }, { PARAM_OSC3_MORPH, 735, 140, 20 },
-            { PARAM_GRAIN_SIZE, 75, 385, 22 }, { PARAM_DENSITY, 195, 385, 22 }, { PARAM_SPRAY, 315, 385, 22 },
-            { PARAM_ATTACK, 460, 370, 18 }, { PARAM_DECAY, 525, 370, 18 }, { PARAM_SUSTAIN, 590, 370, 18 },
-            { PARAM_RELEASE, 655, 370, 18 }, { PARAM_GAIN, 730, 370, 18 }
+            { PARAM_OSC1_GAIN, 65, 140, 20, "Gain" }, { PARAM_OSC1_SEMI, 137, 140, 20, "Semi" }, { PARAM_OSC1_MORPH, 210, 140, 20, "Morph" },
+            { PARAM_OSC2_GAIN, 325, 140, 20, "Gain" }, { PARAM_OSC2_SEMI, 397, 140, 20, "Semi" }, { PARAM_OSC2_MORPH, 470, 140, 20, "Morph" },
+            { PARAM_OSC3_GAIN, 585, 140, 20, "Gain" }, { PARAM_OSC3_SEMI, 660, 140, 20, "Semi" }, { PARAM_OSC3_MORPH, 735, 140, 20, "Morph" },
+            { PARAM_GRAIN_SIZE, 75, 385, 22, "Size" }, { PARAM_DENSITY, 195, 385, 22, "Density" }, { PARAM_SPRAY, 315, 385, 22, "Spray" },
+            { PARAM_ATTACK, 460, 370, 18, "Attack" }, { PARAM_DECAY, 525, 370, 18, "Decay" }, { PARAM_SUSTAIN, 590, 370, 18, "Sustain" },
+            { PARAM_RELEASE, 655, 370, 18, "Release" }, { PARAM_GAIN, 730, 370, 18, "Master" }
         };
         for (size_t i = 0; i < sizeof(KNOBS_OSC) / sizeof(KNOBS_OSC[0]); ++i) {
             float dx = mx - (float)KNOBS_OSC[i].cx;
@@ -215,12 +220,14 @@ void gui_handle_mouse_down(GranularSynth *synth, float mx, float my) {
         }
     } else {
         static const KnobLayout KNOBS_FX[] = {
-            { PARAM_CUTOFF, 80, 145, 22 }, { PARAM_RESONANCE, 190, 145, 22 },
-            { PARAM_CRUSH, 340, 145, 22 }, { PARAM_DOWNSAMPLE, 450, 145, 22 },
-            { PARAM_PHASER_MIX, 575, 130, 17 }, { PARAM_PHASER_RATE, 635, 130, 17 },
-            { PARAM_PHASER_DEPTH, 695, 130, 17 }, { PARAM_PHASER_FEEDBACK, 755, 130, 17 },
-            { PARAM_CHORUS_MIX, 80, 370, 22 }, { PARAM_CHORUS_RATE, 195, 370, 22 }, { PARAM_CHORUS_DEPTH, 310, 370, 22 },
-            { PARAM_REVERB_MIX, 480, 370, 22 }, { PARAM_REVERB_SIZE, 595, 370, 22 }, { PARAM_REVERB_DAMP, 710, 370, 22 }
+            { PARAM_CUTOFF, 80, 145, 22, "Cutoff" }, { PARAM_RESONANCE, 190, 145, 22, "Res" },
+            { PARAM_CRUSH, 340, 145, 22, "Bits" }, { PARAM_DOWNSAMPLE, 450, 145, 22, "Rate" },
+            { PARAM_PHASER_MIX, 568, 135, 17, "Mix" },
+            { PARAM_PHASER_RATE, 626, 135, 17, "Rate" },
+            { PARAM_PHASER_DEPTH, 684, 135, 17, "Depth" },
+            { PARAM_PHASER_FEEDBACK, 742, 135, 17, "Fbk" },
+            { PARAM_CHORUS_MIX, 80, 370, 22, "Mix" }, { PARAM_CHORUS_RATE, 195, 370, 22, "Rate" }, { PARAM_CHORUS_DEPTH, 310, 370, 22, "Depth" },
+            { PARAM_REVERB_MIX, 480, 370, 22, "Mix" }, { PARAM_REVERB_SIZE, 595, 370, 22, "Size" }, { PARAM_REVERB_DAMP, 710, 370, 22, "Damp" }
         };
         for (size_t i = 0; i < sizeof(KNOBS_FX) / sizeof(KNOBS_FX[0]); ++i) {
             float dx = mx - (float)KNOBS_FX[i].cx;
