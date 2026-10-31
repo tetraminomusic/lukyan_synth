@@ -24,17 +24,19 @@ typedef struct {
     const char *label;
 } KnobLayout;
 
-// ЕДИНАЯ ТАБЛИЦА РУЧЕК ОСЦИЛЛЯТОРОВ (И ДЛЯ ОТРИСОВКИ, И ДЛЯ МЫШИ)
 static const KnobLayout KNOBS_OSC[] = {
     { PARAM_OSC1_GAIN, 65, 140, 20, "Получить" }, { PARAM_OSC1_SEMI, 137, 140, 20, "Половина" }, { PARAM_OSC1_MORPH, 210, 140, 20, "Форма" },
     { PARAM_OSC2_GAIN, 325, 140, 20, "Получить" }, { PARAM_OSC2_SEMI, 397, 140, 20, "Половина" }, { PARAM_OSC2_MORPH, 470, 140, 20, "Форма" },
     { PARAM_OSC3_GAIN, 585, 140, 20, "Получить" }, { PARAM_OSC3_SEMI, 660, 140, 20, "Половина" }, { PARAM_OSC3_MORPH, 735, 140, 20, "Форма" },
-    { PARAM_GRAIN_SIZE, 75, 385, 22, "Размер" }, { PARAM_DENSITY, 195, 385, 22, "Плотность" }, { PARAM_SPRAY, 315, 385, 22, "Спрей" },
-    { PARAM_ATTACK, 460, 370, 18, "Нападение" }, { PARAM_DECAY, 525, 370, 18, "Отложенное" }, { PARAM_SUSTAIN, 590, 370, 18, "Продолжение" },
-    { PARAM_RELEASE, 655, 370, 18, "Выпуск" }, { PARAM_GAIN, 730, 370, 18, "Мастер" }
+    { PARAM_GRAIN_SIZE, 80, 385, 22, "Размер" }, { PARAM_DENSITY, 200, 385, 22, "Плотность" }, { PARAM_SPRAY, 320, 385, 22, "Спрей" },
+    
+    { PARAM_ATTACK, 456, 370, 18, "Нападение" },
+    { PARAM_DECAY, 527, 370, 18, "Спад" },
+    { PARAM_SUSTAIN, 598, 370, 18, "Сустейн" },
+    { PARAM_RELEASE, 669, 370, 18, "Выпуск" },
+    { PARAM_GAIN, 740, 370, 18, "Господин" }
 };
 
-// ЕДИНАЯ ТАБЛИЦА РУЧЕК ЭФФЕКТОВ
 static const KnobLayout KNOBS_FX[] = {
     { PARAM_CUTOFF, 80, 145, 22, "Обрезание" }, { PARAM_RESONANCE, 190, 145, 22, "Резонансик" },
     { PARAM_CRUSH, 340, 145, 22, "Биты" }, { PARAM_DOWNSAMPLE, 450, 145, 22, "Частота" },
@@ -95,7 +97,7 @@ static void draw_tab_osc(GranularSynth *synth) {
     draw_text(px, 25, 315, "ГРАНУЛЯРНОЕ ОБЛАКО", 0xFFC678DD);
 
     draw_rect_panel(px, 410, 305, 375, 180, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 420, 315, "ОГИБАЮЩАЯ И МАСТЕР", 0xFFE06C75);
+    draw_text(px, 420, 315, "КОНВЕРТ И ГОСПОДИН", 0xFFE06C75);
 
     for (size_t i = 0; i < sizeof(KNOBS_OSC) / sizeof(KNOBS_OSC[0]); ++i) {
         int id = KNOBS_OSC[i].id;
@@ -117,19 +119,19 @@ static void draw_tab_fx(GranularSynth *synth) {
     uint32_t *px = synth->gui.pixels;
 
     draw_rect_panel(px, 15, 60, 245, 200, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 25, 70, "верхний пропуск фильтрованнное", 0xFF61AFEF);
+    draw_text(px, 25, 70, "ВЕРХНИЙ ПРОПУСК ФИЛЬТРОВАННОЕ", 0xFF61AFEF);
 
     draw_rect_panel(px, 275, 60, 245, 200, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 285, 70, "низкое качество биткрашер кранч", 0xFFE06C75);
+    draw_text(px, 285, 70, "НИЗКОЕ КАЧЕСТВО БИТКРАШЕР КРАНЧ", 0xFFE06C75);
 
     draw_rect_panel(px, 535, 60, 250, 200, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 545, 70, "Фазер мазер", 0xFFE5C07B);
+    draw_text(px, 545, 70, "ФАЗЕР МАЗЕР", 0xFFE5C07B);
 
     draw_rect_panel(px, 15, 280, 380, 205, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 25, 290, "Два-припев", 0xFF98C379);
+    draw_text(px, 25, 290, "ДВА-ПРИПЕВ", 0xFF98C379);
 
     draw_rect_panel(px, 410, 280, 375, 205, 0xA01E222A, 0xFF3E4451);
-    draw_text(px, 420, 290, "ревёрбчик", 0xFFC678DD);
+    draw_text(px, 420, 290, "РЕВЁРБЧИК", 0xFFC678DD);
 
     for (size_t i = 0; i < sizeof(KNOBS_FX) / sizeof(KNOBS_FX[0]); ++i) {
         int id = KNOBS_FX[i].id;
@@ -153,7 +155,7 @@ void gui_render_frame(GranularSynth *synth) {
     draw_copy_bg(synth->gui.pixels, synth->gui.bg_pixels, FB_WIDTH * FB_HEIGHT);
 
     draw_rect_panel(synth->gui.pixels, 0, 0, GUI_WIDTH, 50, 0xD0181A1F, 0xFF282C34);
-    draw_text(synth->gui.pixels, 20, 20, "Лукьянчик синт  //  ЛЕГЕНДАРНЫЙ ШЛЯГЕРНЫЙ СИНТ", 0xFFE5C07B);
+    draw_text(synth->gui.pixels, 20, 20, "ЛУКЬЯНЧИК СИНТ  //  ЛЕГЕНДАРНЫЙ ШЛЯГЕРНЫЙ СИНТ", 0xFFE5C07B);
     draw_text(synth->gui.pixels, 340, 20, "от тетраминыча", 0xFF5C6370);
 
     draw_button(synth->gui.pixels, 520, 12, 125, 28, "Осциляторы и всякое", synth->gui.current_tab == TAB_OSC);
@@ -403,6 +405,7 @@ const clap_plugin_gui_t g_gui_extension = {
     .adjust_size = gui_adjust_size,
     .set_size = gui_set_size,
     .set_parent = gui_set_parent,
+    .set_transient = gui_set_transient,
     .suggest_title = gui_suggest_title,
     .show = gui_show,
     .hide = gui_hide,
