@@ -9,13 +9,18 @@
 #define GUI_WIDTH 800
 #define GUI_HEIGHT 500
 #define GUI_SCALE 2
-#define FB_WIDTH (GUI_WIDTH * GUI_SCALE)   // 1600px
-#define FB_HEIGHT (GUI_HEIGHT * GUI_SCALE) // 1000px
+#define FB_WIDTH (GUI_WIDTH * GUI_SCALE)
+#define FB_HEIGHT (GUI_HEIGHT * GUI_SCALE)
 
 typedef enum {
     TAB_OSC = 0,
     TAB_FX
 } GuiTab;
+
+typedef enum {
+    LANG_MEME_RU = 0,
+    LANG_EN
+} GuiLang;
 
 typedef struct GuiState {
     uint32_t pixels[FB_WIDTH * FB_HEIGHT];
@@ -25,6 +30,7 @@ typedef struct GuiState {
     bool is_open;
 
     GuiTab current_tab;
+    GuiLang current_lang;
     int active_param_id;
     float drag_start_y;
     double drag_start_val;
