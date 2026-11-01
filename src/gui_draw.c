@@ -40,48 +40,29 @@ static const uint8_t FONT_5X7[95][5] = {
     {0x00, 0x41, 0x36, 0x08, 0x00}, {0x08, 0x08, 0x2A, 0x1C, 0x08}
 };
 
-static const uint8_t GLYPH_B[5] = {0x7F, 0x49, 0x49, 0x49, 0x31};
-static const uint8_t GLYPH_G[5] = {0x7F, 0x01, 0x01, 0x01, 0x01};
-static const uint8_t GLYPH_D[5] = {0x60, 0x3F, 0x21, 0x3F, 0x60};
-static const uint8_t GLYPH_ZH[5] = {0x49, 0x2A, 0x7F, 0x2A, 0x49};
-static const uint8_t GLYPH_Z[5] = {0x22, 0x49, 0x49, 0x49, 0x36};
-static const uint8_t GLYPH_I[5] = {0x7F, 0x10, 0x08, 0x04, 0x7F};
-static const uint8_t GLYPH_YI[5] = {0x7F, 0x12, 0x09, 0x04, 0x7F};
-static const uint8_t GLYPH_L[5] = {0x60, 0x1F, 0x01, 0x01, 0x7F};
-static const uint8_t GLYPH_P[5] = {0x7F, 0x01, 0x01, 0x01, 0x7F};
-static const uint8_t GLYPH_F[5] = {0x1C, 0x22, 0x7F, 0x22, 0x1C};
-static const uint8_t GLYPH_TS[5] = {0x3F, 0x20, 0x20, 0x3F, 0xC0};
-static const uint8_t GLYPH_CH[5] = {0x0F, 0x08, 0x08, 0x08, 0x7F};
-static const uint8_t GLYPH_SH[5] = {0x7F, 0x40, 0x7F, 0x40, 0x7F};
-static const uint8_t GLYPH_SHCH[5] = {0x3F, 0x20, 0x3F, 0x20, 0xE0};
-static const uint8_t GLYPH_HARD[5] = {0x01, 0x7F, 0x48, 0x48, 0x30};
-static const uint8_t GLYPH_Y[5] = {0x7F, 0x48, 0x30, 0x00, 0x7F};
-static const uint8_t GLYPH_SOFT[5] = {0x7F, 0x48, 0x48, 0x48, 0x30};
-static const uint8_t GLYPH_EE[5] = {0x22, 0x49, 0x49, 0x41, 0x3E};
-static const uint8_t GLYPH_YU[5] = {0x7F, 0x08, 0x3E, 0x41, 0x3E};
-static const uint8_t GLYPH_YA[5] = {0x46, 0x29, 0x19, 0x09, 0x7F};
+static const uint8_t GLYPH_B[5] = {0x7F, 0x49, 0x49, 0x49, 0x31}; // Б
+static const uint8_t GLYPH_G[5] = {0x7F, 0x01, 0x01, 0x01, 0x01}; // Г
+static const uint8_t GLYPH_D[5] = {0x60, 0x3F, 0x21, 0x3F, 0x60}; // Д
+static const uint8_t GLYPH_ZH[5] = {0x49, 0x2A, 0x7F, 0x2A, 0x49}; // Ж
+static const uint8_t GLYPH_Z[5] = {0x22, 0x49, 0x49, 0x49, 0x36}; // З
+static const uint8_t GLYPH_I[5] = {0x7F, 0x10, 0x08, 0x04, 0x7F}; // И
+static const uint8_t GLYPH_YI[5] = {0x7F, 0x12, 0x09, 0x04, 0x7F}; // Й
+static const uint8_t GLYPH_L[5] = {0x60, 0x1F, 0x01, 0x01, 0x7F}; // Л
+static const uint8_t GLYPH_P[5] = {0x7F, 0x01, 0x01, 0x01, 0x7F}; // П
+static const uint8_t GLYPH_F[5] = {0x1C, 0x22, 0x7F, 0x22, 0x1C}; // Ф
+static const uint8_t GLYPH_TS[5] = {0x3F, 0x20, 0x20, 0x3F, 0xC0}; // Ц
+static const uint8_t GLYPH_CH[5] = {0x0F, 0x08, 0x08, 0x08, 0x7F}; // Ч
+static const uint8_t GLYPH_SH[5] = {0x7F, 0x40, 0x7F, 0x40, 0x7F}; // Ш
+static const uint8_t GLYPH_SHCH[5] = {0x3F, 0x20, 0x3F, 0x20, 0xE0}; // Щ
+static const uint8_t GLYPH_HARD[5] = {0x01, 0x7F, 0x48, 0x48, 0x30}; // Ъ
+static const uint8_t GLYPH_Y[5] = {0x7F, 0x48, 0x30, 0x00, 0x7F}; // Ы
+static const uint8_t GLYPH_SOFT[5] = {0x7F, 0x48, 0x48, 0x48, 0x30}; // Ь
+static const uint8_t GLYPH_EE[5] = {0x22, 0x49, 0x49, 0x41, 0x3E}; // Э
+static const uint8_t GLYPH_YU[5] = {0x7F, 0x08, 0x3E, 0x41, 0x3E}; // Ю
+static const uint8_t GLYPH_YA[5] = {0x46, 0x29, 0x19, 0x09, 0x7F}; // Я
 
 void draw_copy_bg(uint32_t *dst, const uint32_t *src, int count) {
     memcpy(dst, src, count * sizeof(uint32_t));
-}
-
-static inline uint32_t blend_color(uint32_t bg, uint32_t fg, float alpha) {
-    if (alpha <= 0.0f) return bg;
-    if (alpha >= 1.0f) return fg;
-
-    uint32_t bg_r = (bg >> 16) & 0xFF;
-    uint32_t bg_g = (bg >> 8) & 0xFF;
-    uint32_t bg_b = bg & 0xFF;
-
-    uint32_t fg_r = (fg >> 16) & 0xFF;
-    uint32_t fg_g = (fg >> 8) & 0xFF;
-    uint32_t fg_b = fg & 0xFF;
-
-    uint8_t out_r = (uint8_t)(bg_r + (fg_r - bg_r) * alpha);
-    uint8_t out_g = (uint8_t)(bg_g + (fg_g - bg_g) * alpha);
-    uint8_t out_b = (uint8_t)(bg_b + (fg_b - bg_b) * alpha);
-
-    return (0xFF << 24) | (out_r << 16) | (out_g << 8) | out_b;
 }
 
 void draw_rect_panel(uint32_t *pixels, int x, int y, int w, int h, uint32_t bg_color, uint32_t border_color) {
@@ -90,24 +71,39 @@ void draw_rect_panel(uint32_t *pixels, int x, int y, int w, int h, uint32_t bg_c
     w *= GUI_SCALE;
     h *= GUI_SCALE;
 
-    float a = (float)((bg_color >> 24) & 0xFF) / 255.0f;
+    uint8_t a = (bg_color >> 24) & 0xFF;
+    uint8_t r = (bg_color >> 16) & 0xFF;
+    uint8_t g = (bg_color >> 8) & 0xFF;
+    uint8_t b = bg_color & 0xFF;
 
     for (int py = y; py < y + h; ++py) {
         if (py < 0 || py >= FB_HEIGHT) continue;
         for (int px = x; px < x + w; ++px) {
             if (px < 0 || px >= FB_WIDTH) continue;
 
-            if (px < x + 3 || px >= x + w - 3 || py < y + 3 || py >= y + h - 3) {
+            if (px < x + 2 || px >= x + w - 2 || py < y + 2 || py >= y + h - 2) {
                 pixels[py * FB_WIDTH + px] = border_color;
             } else {
-                pixels[py * FB_WIDTH + px] = blend_color(pixels[py * FB_WIDTH + px], bg_color, a);
+                uint32_t bg = pixels[py * FB_WIDTH + px];
+                uint8_t bg_r = (bg >> 16) & 0xFF;
+                uint8_t bg_g = (bg >> 8) & 0xFF;
+                uint8_t bg_b = bg & 0xFF;
+
+                uint8_t out_r = (r * a + bg_r * (255 - a)) / 255;
+                uint8_t out_g = (g * a + bg_g * (255 - a)) / 255;
+                uint8_t out_b = (b * a + bg_b * (255 - a)) / 255;
+
+                pixels[py * FB_WIDTH + px] = (0xFF << 24) | (out_r << 16) | (out_g << 8) | out_b;
             }
         }
     }
 }
 
 static const uint8_t *get_glyph(uint32_t cp) {
-    if (cp >= 32 && cp <= 126) return FONT_5X7[cp - 32];
+    if (cp >= 32 && cp <= 126) {
+        return FONT_5X7[cp - 32];
+    }
+
     if (cp >= 0x0430 && cp <= 0x044F) cp -= 0x20;
     if (cp == 0x0451) cp = 0x0401;
 
@@ -173,25 +169,6 @@ void draw_text(uint32_t *pixels, int x, int y, const char *str, uint32_t color) 
 
         const uint8_t *glyph = get_glyph(cp);
 
-        // Тень
-        for (int col = 0; col < 5; ++col) {
-            uint8_t line = glyph[col];
-            for (int row = 0; row < 7; ++row) {
-                if (line & (1 << row)) {
-                    for (int dy = 0; dy < GUI_SCALE; ++dy) {
-                        for (int dx = 0; dx < GUI_SCALE; ++dx) {
-                            int px = cur_x + col * GUI_SCALE + dx + 2;
-                            int py = base_y + row * GUI_SCALE + dy + 2;
-                            if (px >= 0 && px < FB_WIDTH && py >= 0 && py < FB_HEIGHT) {
-                                pixels[py * FB_WIDTH + px] = blend_color(pixels[py * FB_WIDTH + px], 0xFF000000, 0.75f);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Основные буквы
         for (int col = 0; col < 5; ++col) {
             uint8_t line = glyph[col];
             for (int row = 0; row < 7; ++row) {
@@ -234,83 +211,53 @@ void draw_button(uint32_t *pixels, int x, int y, int w, int h, const char *label
     draw_text(pixels, tx, ty, label, txt);
 }
 
-// Расчет расстояния от точки до отрезка для субпиксельного рендеринга стрелки
-static float dist_to_segment(float px, float py, float x1, float y1, float x2, float y2) {
-    float dx = x2 - x1;
-    float dy = y2 - y1;
-    float len_sq = dx * dx + dy * dy;
-    if (len_sq == 0.0f) return sqrtf((px - x1) * (px - x1) + (py - y1) * (py - y1));
-    float t = ((px - x1) * dx + (py - y1) * dy) / len_sq;
-    if (t < 0.0f) t = 0.0f;
-    if (t > 1.0f) t = 1.0f;
-    float proj_x = x1 + t * dx;
-    float proj_y = y1 + t * dy;
-    return sqrtf((px - proj_x) * (px - proj_x) + (py - proj_y) * (py - proj_y));
-}
-
 void draw_knob(uint32_t *pixels, int cx, int cy, int radius, float norm_val, const char *name, const char *val_str, bool is_active) {
     if (norm_val < 0.0f) norm_val = 0.0f;
     if (norm_val > 1.0f) norm_val = 1.0f;
 
-    float r_px = (float)(radius * GUI_SCALE);
-    float cx_px = (float)(cx * GUI_SCALE);
-    float cy_px = (float)(cy * GUI_SCALE);
+    int r_px = radius * GUI_SCALE;
+    int cx_px = cx * GUI_SCALE;
+    int cy_px = cy * GUI_SCALE;
 
-    uint32_t ring_color = is_active ? 0xFF61AFEF : 0xFF6C7380;
-    uint32_t fill_color = 0xF0181A1F;
+    uint32_t ring_color = is_active ? 0xFF61AFEF : 0xFF5C6370;
+    uint32_t fill_color = 0xFF21252B;
 
-    int r_bound = (int)(r_px + 2.0f);
-
-    // Субпиксельный антиалиасинг окружности крутилки (Distance Field AA)
-    for (int dy = -r_bound; dy <= r_bound; ++dy) {
-        int py = (int)cy_px + dy;
+    for (int dy = -r_px; dy <= r_px; ++dy) {
+        int py = cy_px + dy;
         if (py < 0 || py >= FB_HEIGHT) continue;
-        for (int dx = -r_bound; dx <= r_bound; ++dx) {
-            int px = (int)cx_px + dx;
+        for (int dx = -r_px; dx <= r_px; ++dx) {
+            int px = cx_px + dx;
             if (px < 0 || px >= FB_WIDTH) continue;
 
-            float dist = sqrtf((float)(dx * dx + dy * dy));
-
-            // Внешний сглаженный край
-            float outer_alpha = r_px - dist + 0.5f;
-            if (outer_alpha <= 0.0f) continue;
-            if (outer_alpha > 1.0f) outer_alpha = 1.0f;
-
-            // Внутреннее заполнение
-            float inner_dist = r_px - 5.0f;
-            if (dist < inner_dist) {
-                pixels[py * FB_WIDTH + px] = blend_color(pixels[py * FB_WIDTH + px], fill_color, outer_alpha);
-            } else {
-                float ring_alpha = outer_alpha;
-                pixels[py * FB_WIDTH + px] = blend_color(pixels[py * FB_WIDTH + px], ring_color, ring_alpha);
+            int dist_sq = dx * dx + dy * dy;
+            if (dist_sq <= r_px * r_px) {
+                if (dist_sq >= (r_px - 4) * (r_px - 4)) {
+                    pixels[py * FB_WIDTH + px] = ring_color;
+                } else {
+                    pixels[py * FB_WIDTH + px] = fill_color;
+                }
             }
         }
     }
 
     float angle = (-135.0f + norm_val * 270.0f) * ((float)PI / 180.0f);
-    float pointer_len = r_px - 6.0f;
-    float end_x = cx_px + sinf(angle) * pointer_len;
-    float end_y = cy_px - cosf(angle) * pointer_len;
+    int pointer_len = r_px - 6;
+    int end_x = cx_px + (int)(sinf(angle) * (float)pointer_len);
+    int end_y = cy_px - (int)(cosf(angle) * (float)pointer_len);
 
     uint32_t needle_color = is_active ? 0xFF98C379 : 0xFFE5C07B;
 
-    // Векторное субпиксельное сглаживание стрелки
-    int min_x = (int)fminf(cx_px, end_x) - 4;
-    int max_x = (int)fmaxf(cx_px, end_x) + 4;
-    int min_y = (int)fminf(cy_px, end_y) - 4;
-    int max_y = (int)fmaxf(cy_px, end_y) + 4;
-
-    for (int py = min_y; py <= max_y; ++py) {
-        if (py < 0 || py >= FB_HEIGHT) continue;
-        for (int px = min_x; px <= max_x; ++px) {
-            if (px < 0 || px >= FB_WIDTH) continue;
-
-            float d = dist_to_segment((float)px, (float)py, cx_px, cy_px, end_x, end_y);
-            float line_alpha = 1.8f - d;
-            if (line_alpha <= 0.0f) continue;
-            if (line_alpha > 1.0f) line_alpha = 1.0f;
-
-            pixels[py * FB_WIDTH + px] = blend_color(pixels[py * FB_WIDTH + px], needle_color, line_alpha);
+    for (float t = 0.0f; t <= 1.0f; t += 0.05f) {
+        int lx = cx_px + (int)((float)(end_x - cx_px) * t);
+        int ly = cy_px + (int)((float)(end_y - cy_px) * t);
+        for (int ox = -1; ox <= 1; ++ox) {
+            for (int oy = -1; oy <= 1; ++oy) {
+                int px = lx + ox;
+                int py = ly + oy;
+                if (px >= 0 && px < FB_WIDTH && py >= 0 && py < FB_HEIGHT) {
+                    pixels[py * FB_WIDTH + px] = needle_color;
+                }
+            }
         }
     }
 
@@ -324,8 +271,8 @@ void draw_knob(uint32_t *pixels, int cx, int cy, int radius, float norm_val, con
     }
 
     int name_len = char_count * 6;
-    draw_text(pixels, cx - name_len / 2, cy + radius + 5, name, 0xFFFFFFFF);
+    draw_text(pixels, cx - name_len / 2, cy + radius + 4, name, 0xFFABB2BF);
 
     int val_len = (int)strlen(val_str) * 6;
-    draw_text(pixels, cx - val_len / 2, cy + radius + 17, val_str, 0xFF98C379);
+    draw_text(pixels, cx - val_len / 2, cy + radius + 15, val_str, is_active ? 0xFF98C379 : 0xFF5C6370);
 }
