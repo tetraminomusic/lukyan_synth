@@ -33,9 +33,14 @@ jobs:
       - name: Package VST3 Plugin
         shell: bash
         run: |
+          # Автоматически находим скомпилированный бинарник обертки
+          WRAPPER_FILE=$(find clap-wrapper/build -type f \( -name "clapasvst3.vst3" -o -name "clapasvst3.dll" -o -name "clapasvst3" \) | head -n 1)
+          echo "Found wrapper binary at: $WRAPPER_FILE"
+          
           mkdir -p "build/Release/Lukyan Synth.vst3/Contents/x86_64-win"
           mkdir -p "build/Release/Lukyan Synth.vst3/Contents/Resources"
-          cp clap-wrapper/build/clapasvst3.vst3/Contents/x86_64-win/clapasvst3.vst3 "build/Release/Lukyan Synth.vst3/Contents/x86_64-win/Lukyan Synth.vst3"
+          
+          cp "$WRAPPER_FILE" "build/Release/Lukyan Synth.vst3/Contents/x86_64-win/Lukyan Synth.vst3"
           cp "build/Release/Lukyan Synth.clap" "build/Release/Lukyan Synth.vst3/Contents/Resources/"
 
       - name: Upload Windows Plugins (CLAP + VST3)
