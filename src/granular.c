@@ -180,10 +180,7 @@ void granular_render_block(GranularEngine *engine, float *out_l, float *out_r, u
     for (uint32_t i = 0; i < frames; i += SIMD_BLOCK_SIZE) {
         uint32_t block_frames = (frames - i < SIMD_BLOCK_SIZE) ? (frames - i) : SIMD_BLOCK_SIZE;
 
-        for (uint32_t k = 0; k < SIMD_BLOCK_SIZE; ++k) {
-            block_mix_l[k] = 0.0f;
-            block_mix_r[k] = 0.0f;
-        }
+        simd_clear_block_stereo(block_mix_l, block_mix_r);
 
         for (uint32_t k = 0; k < block_frames; ++k) {
             for (int v = 0; v < MAX_VOICES; ++v) {
@@ -236,8 +233,7 @@ void granular_render_block(GranularEngine *engine, float *out_l, float *out_r, u
             float gain_l = grain->amp * 0.150f * (1.0f - grain->pan);
             float gain_r = grain->amp * 0.150f * grain->pan;
 
-            simd_grain_accumulate(block_mix_l, block_audio, block_window, SIMD_BLOCK_SIZE, gain_l);
-            simd_grain_accumulate(block_mix_r, block_audio, block_window, SIMD_BLOCK_SIZE, gain_r);
+            simd_grain_accumulate_stereo(block_mix_l, block_mix_r, block_audio, block_window, SIMD_BLOCK_SIZE, gain_l, gain_r);
 
             for (int o = 0; o < NUM_OSCS; ++o) {
                 grain->pos[o] += grain->speed[o] * (float)block_frames;
