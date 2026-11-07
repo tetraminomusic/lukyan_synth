@@ -4,6 +4,9 @@
 #include <clap/clap.h>
 #include "granular.h"
 #include "gui.h"
+#include "arena.h"
+
+#define PLUGIN_MEMORY_POOL_SIZE (4 * 1024 * 1024)
 
 typedef enum {
     PARAM_GRAIN_SIZE = 0,
@@ -46,6 +49,8 @@ typedef struct GranularSynth {
     double values[PARAM_COUNT];
     GranularEngine engine;
     GuiState gui;
+    uint8_t memory_pool[PLUGIN_MEMORY_POOL_SIZE];
+    MemoryArena arena;
 } GranularSynth;
 
 uint32_t params_get_count(void);
