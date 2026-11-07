@@ -165,81 +165,99 @@ static void spawn_grain(GranularEngine *engine, float frequency, float amp) {
 }
 
 void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) {
-    const float sr = (engine->sample_rate > 0.0) ? (float)engine->sample_rate : 44100.0f;
-    const float spawn_interval = (engine->density > 0.0f) ? (sr / engine->density) : 1000.0f;
-
-    for (int v = 0; v < MAX_VOICES; ++v) {
-        if (!engine->voices[v].active) continue;
-
-        Voice *voice = &engine->voices[v];
-        adsr_voice_process(&voice->adsr, &engine->adsr_params, sr);
-
-        if (voice->adsr.state == ADSR_IDLE) {
-            voice->active = false;
-            voice->key = -1;
-            continue;
-        }
-
-        if (voice->adsr.value > 0.0f) {
-            voice->spawn_timer += 1.0f;
-            if (voice->spawn_timer >= spawn_interval) {
-                voice->spawn_timer = 0.0f;
-                spawn_grain(engine, voice->frequency, voice->adsr.value);
-            }
-        }
-    }
-
-    engine->playhead += 0.5f;
-    if (engine->playhead >= (float)SAMPLE_BUFFER_SIZE) {
-        engine->playhead -= (float)SAMPLE_BUFFER_SIZE;
-    }
-
-    float mixed_l = 0.0f;
-    float mixed_r = 0.0f;
-
-    for (int g = 0; g < MAX_GRAINS; ++g) {
-        if (!engine->grains[g].active) continue;
-
-        Grain *grain = &engine->grains[g];
-
-        float win_norm = grain->progress / grain->length;
-        int lut_idx = (int)(win_norm * (float)(HANN_LUT_SIZE - 1));
-        if (lut_idx >= HANN_LUT_SIZE) lut_idx = HANN_LUT_SIZE - 1;
-        float env = engine->hann_lut[lut_idx];
-
-        float audio_val = 0.0f;
-        for (int o = 0; o < NUM_OSCS; ++o) {
-            if (engine->osc_gain[o] > 0.001f) {
-                audio_val += oscillator_read_morphed(grain->pos[o], engine->osc_morph[o]) * engine->osc_gain[o];
-            }
-            grain->pos[o] += grain->speed[o];
-            while (grain->pos[o] >= (float)SAMPLE_BUFFER_SIZE) grain->pos[o] -= (float)SAMPLE_BUFFER_SIZE;
-        }
-
-        float grain_amp = audio_val * env * grain->amp * 0.150f; // Увеличенная громкость зерен
-        mixed_l += grain_amp * (1.0f - grain->pan);
-        mixed_r += grain_amp * grain->pan;
-
-        grain->progress += 1.0f;
-        if (grain->progress >= grain->length) {
-            grain->active = false;
-        }
-    }
-
-    fx_process(&engine->fx_state, &engine->fx_params, &mixed_l, &mixed_r, sr);
-
-    *out_l = mixed_l;
-    *out_r = mixed_r;
+    (void)engine; (void)out_l; (void)out_r;
 }
 
 void granular_render_block(GranularEngine *engine, float *out_l, float *out_r, uint32_t frames) {
-    for (uint32_t i = 0; i < frames; ++i) {
-        float sample_l = 0.0f;
-        float sample_r = 0.0f;
+    const float sr = (engine->sample_rate > 0.0) ? (float)engine->sample_rate : 44100.0f;
+    const float spawn_interval = (engine->density > 0.0f) ? (sr / engine->density) : 1000.0f;
 
-        granular_render_sample(engine, &sample_l, &sample_r);
+    float block_mix_l[SIMD_BLOCK_SIZE];
+    float block_mix_r[SIMD_BLOCK_SIZE];
+    float block_audio[SIMD_BLOCK_SIZE];
+    float block_window[SIMD_BLOCK_SIZE];
 
-        if (out_l) out_l[i] = sample_l;
-        if (out_r) out_r[i] = sample_r;
+    for (uint32_t i = 0; i < frames; i += SIMD_BLOCK_SIZE) {
+        uint32_t block_frames = (frames - i < SIMD_BLOCK_SIZE) ? (frames - i) : SIMD_BLOCK_SIZE;
+
+        for (uint32_t k = 0; k < SIMD_BLOCK_SIZE; ++k) {
+            block_mix_l[k] = 0.0f;
+            block_mix_r[k] = 0.0f;
+        }
+
+        for (uint32_t k = 0; k < block_frames; ++k) {
+            for (int v = 0; v < MAX_VOICES; ++v) {
+                if (!engine->voices[v].active) continue;
+                Voice *voice = &engine->voices[v];
+                
+                adsr_voice_process(&voice->adsr, &engine->adsr_params, sr);
+                if (voice->adsr.state == ADSR_IDLE) {
+                    voice->active = false;
+                    voice->key = -1;
+                    continue;
+                }
+
+                if (voice->adsr.value > 0.0f) {
+                    voice->spawn_timer += 1.0f;
+                    if (voice->spawn_timer >= spawn_interval) {
+                        voice->spawn_timer -= spawn_interval;
+                        spawn_grain(engine, voice->frequency, voice->adsr.value);
+                    }
+                }
+            }
+
+            engine->playhead += 0.5f;
+            if (engine->playhead >= (float)SAMPLE_BUFFER_SIZE) {
+                engine->playhead -= (float)SAMPLE_BUFFER_SIZE;
+            }
+        }
+
+        for (int g = 0; g < MAX_GRAINS; ++g) {
+            if (!engine->grains[g].active) continue;
+            Grain *grain = &engine->grains[g];
+
+            for (uint32_t k = 0; k < block_frames; ++k) {
+                float win_norm = (grain->progress + (float)k) / grain->length;
+                int lut_idx = (int)(win_norm * (float)(HANN_LUT_SIZE - 1));
+                if (lut_idx >= HANN_LUT_SIZE) lut_idx = HANN_LUT_SIZE - 1;
+                block_window[k] = engine->hann_lut[lut_idx];
+
+                float audio_val = 0.0f;
+                for (int o = 0; o < NUM_OSCS; ++o) {
+                    if (engine->osc_gain[o] > 0.001f) {
+                        float cur_pos = grain->pos[o] + grain->speed[o] * (float)k;
+                        while (cur_pos >= (float)SAMPLE_BUFFER_SIZE) cur_pos -= (float)SAMPLE_BUFFER_SIZE;
+                        audio_val += oscillator_read_morphed(cur_pos, engine->osc_morph[o]) * engine->osc_gain[o];
+                    }
+                }
+                block_audio[k] = audio_val;
+            }
+
+            float gain_l = grain->amp * 0.150f * (1.0f - grain->pan);
+            float gain_r = grain->amp * 0.150f * grain->pan;
+
+            simd_grain_accumulate(block_mix_l, block_audio, block_window, SIMD_BLOCK_SIZE, gain_l);
+            simd_grain_accumulate(block_mix_r, block_audio, block_window, SIMD_BLOCK_SIZE, gain_r);
+
+            for (int o = 0; o < NUM_OSCS; ++o) {
+                grain->pos[o] += grain->speed[o] * (float)block_frames;
+                while (grain->pos[o] >= (float)SAMPLE_BUFFER_SIZE) grain->pos[o] -= (float)SAMPLE_BUFFER_SIZE;
+            }
+
+            grain->progress += (float)block_frames;
+            if (grain->progress >= grain->length) {
+                grain->active = false;
+            }
+        }
+
+        for (uint32_t k = 0; k < block_frames; ++k) {
+            float out_smp_l = block_mix_l[k];
+            float out_smp_r = block_mix_r[k];
+
+            fx_process(&engine->fx_state, &engine->fx_params, &out_smp_l, &out_smp_r, sr);
+
+            if (out_l) out_l[i + k] = out_smp_l;
+            if (out_r) out_r[i + k] = out_smp_r;
+        }
     }
 }
