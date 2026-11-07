@@ -1,9 +1,11 @@
 #include "granular.h"
+#include "simd_math.h"
 #include <math.h>
 #include <stdlib.h>
 
 #define PI 3.14159265358979323846
 #define BASE_ROOT_FREQ 110.0f
+#define SIMD_BLOCK_SIZE 8
 
 static void init_hann_lut(GranularEngine *engine) {
     for (int i = 0; i < HANN_LUT_SIZE; ++i) {
