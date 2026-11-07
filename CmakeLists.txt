@@ -16,6 +16,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(clap)
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64|amd64)")
+    message(STATUS "Платформа x86-64: подключаем AVX2 ассемблер")
+    enable_language(ASM)
+    set(SIMD_SRC src/simd_math_x86.S)
+else()
+    message(STATUS "Платформа ARM64: подключаем Си-фоллбэк")
+    set(SIMD_SRC src/simd_math_c.c)
+endif()
+
 add_library(granular_synth MODULE 
     src/plugin.c 
     src/gui.c
@@ -27,6 +36,7 @@ add_library(granular_synth MODULE
     src/oscillator.c
     src/adsr.c
     src/fx.c
+    ${SIMD_SRC}
 )
 
 target_link_libraries(granular_synth PRIVATE clap)
