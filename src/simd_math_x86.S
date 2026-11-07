@@ -1,34 +1,52 @@
 .text
-    .global _simd_grain_accumulate
-    .global simd_grain_accumulate
+    .global _simd_clear_block_stereo
+    .global simd_clear_block_stereo
+    .global _simd_grain_accumulate_stereo
+    .global simd_grain_accumulate_stereo
 
 // Пусть для маков точка входа будет с нижним подчёркиваем, а для линукса без
 
-_simd_grain_accumulate:
-simd_grain_accumulate:
+_simd_clear_block_stereo:
+simd_clear_block_stereo:
+    vxorps %ymm0, %ymm0, %ymm0
+    vmovups %ymm0, (%rdi)
+    vmovups %ymm0, (%rsi)
+    vzeroupper
+    ret
+
+_simd_grain_accumulate_stereo:
+simd_grain_accumulate_stereo:
     vbroadcastss %xmm0, %ymm0
+    vbroadcastss %xmm1, %ymm1
 
-    shr $3, %rcx
-
-    test %rcx, %rcx
+    shr $3, %r8
+    test %r8, %r8
     jz .Lend
 
-.Llopp:
-    vmovups (%rsi), %ymm1
+.Lloop:
     vmovups (%rdx), %ymm2
-    vmulps %ymm2, %ymm1, %ymm1
+    vmovups (%rcx), %ymm3
 
-    vmovups (%rdi), %ymm3
-    vfmadd231ps %ymm0, %ymm1, %ymm3
-    vmovups %ymm3, (%rdi)
+    vmulps %ymm3, %ymm2, %ymm2
+
+    vmovups (%rdi), %ymm4
+    vmovups (%rsi), %ymm5
+
+    vfmadd231ps %ymm0, %ymm2, %ymm4
+    vfmadd231ps %ymm1, %ymm2, %ymm5
+
+    vmovups %ymm4, (%rdi)
+    vmovups %ymm5, (%rsi)
 
     add $32, %rdi
     add $32, %rsi
     add $32, %rdx
+    add $32, %rcx
 
-    dec %rcx
+    dec %r8
     jnz .Lloop
 
 .Lend:
     vzeroupper
     ret
+
