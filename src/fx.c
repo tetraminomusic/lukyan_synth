@@ -1,4 +1,5 @@
 #include "fx.h"
+#include "fast_math.h"
 #include <math.h>
 
 #define PI 3.14159265358979323846
@@ -57,8 +58,8 @@ static float read_delay(const float *buffer, float read_pos) {
 void fx_process(FxState *state, const FxParams *params, float *out_l, float *out_r, float sample_rate) {
     float sr = (sample_rate > 0.0f) ? sample_rate : 44100.0f;
 
-    float raw_l = tanhf(*out_l * 2.0f) * 0.95f * params->gain;
-    float raw_r = tanhf(*out_r * 2.0f) * 0.95f * params->gain;
+    float raw_l = fast_tanhf(*out_l * 2.0f) * 0.95f * params->gain;
+    float raw_r = fast_tanhf(*out_r * 2.0f) * 0.95f * params->gain;
 
     if (params->downsample > 1.05f) {
         state->ds_counter += 1.0f;
@@ -195,6 +196,6 @@ void fx_process(FxState *state, const FxParams *params, float *out_l, float *out
         apf_r = new_apf_r;
     }
 
-    *out_l = dry_rev_l * (1.0f - params->reverb_mix) + apf_l * params->reverb_mix * 3.5f;
-    *out_r = dry_rev_r * (1.0f - params->reverb_mix) + apf_r * params->reverb_mix * 3.5f;
+    *out_l = fast_tanhf(dry_rev_l * (1.0f - params->reverb_mix) + apf_l * params->reverb_mix * 3.5f);
+    *out_r = fast_tanhf(dry_rev_r * (1.0f - params->reverb_mix) + apf_r * params->reverb_mix * 3.5f);
 }
