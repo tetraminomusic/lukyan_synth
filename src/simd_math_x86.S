@@ -1,10 +1,13 @@
 .text
     .global _simd_clear_block_stereo
     .global simd_clear_block_stereo
+
     .global _simd_grain_accumulate_stereo
     .global simd_grain_accumulate_stereo
+
     .global _simd_lerp_block
     .global simd_lerp_block
+
     .global _simd_svf_process_stereo
     .global simd_svf_process_stereo
 
@@ -94,4 +97,36 @@ simd_lerp_block:
 
 _simd_svf_process_stereo:
 simd_svf_process_stereo:
+    vmovss %xmm0, %xmm2
+    vaddss %xmm1, %xmm2, %xmm3
+    vmulss %xmm0, %xmm3, %xmm3
+    vmovss .LC_ONE(%rip), %xmm4
+    vaddss %xmm3, %xmm4, %xmm3
+    vdivss %xmm3, %xmm4, %xmm4
+
+    vmulss %xmm0, %xmm4, %xmm5
+
+    vmulss %xmm0, %xmm5, %xmm6
+
+    mov %edx, %ecx
+    shr $3, %ecx
+    jz .Lend_svf
+
+.Lloop_svf:
+    vmovups (%rdi), %ymm2
+    vfmadd231ps %ymm4, %ymm2, %ymm2 
+    vmovups %ymm2, (%rdi)
+    
+    add $32, %rdi
+    add $32, %rsi
+    dec %ecx
+    jnz .Lloop_svf
+
+.Lend_svf:
+    vzeroupper
     ret
+
+.section .rodata
+    .align 32
+.LC_ONE:
+    .float 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
