@@ -1,4 +1,7 @@
 #include "simd_math.h"
+#include <math.h>
+
+#define PI 3.14159265358979323846
 
 void simd_clear_block_stereo(float *out_l, float *out_r) {
     for (int i = 0; i < 8; ++i) {
@@ -42,5 +45,35 @@ void simd_adsr_process_block(float *values, const uint32_t *states, float attack
             default:
                 break;
         }
+    }
+}
+
+static float ic1eq_l = 0.0f, ic2eq_l = 0.0f;
+static float ic1eq_r = 0.0f, ic2eq_r = 0.0f;
+
+void simd_svf_process_stereo(float *samples_l, float *samples_r, uint32_t count, float cutoff_hz, float resonance, float sample_rate) {
+    float sr = (sample_rate > 0.0f) ? sample_rate : 44100.0f;
+    float g = tanf((float)PI * cutoff_hz / sr);
+    float k = 1.0f / resonance;
+    float a1 = 1.0f / (1.0f + g * (g + k));
+    float a2 = g * a1;
+    float a3 = g * a2;
+
+    for (uint32_t i = 0; i < count; ++i) {
+        // Левый канал
+        float v3_l = samples_l[i] - ic2eq_l;
+        float v1_l = a1 * ic1eq_l + a2 * v3_l;
+        float v2_l = ic2eq_l + a2 * ic1eq_l + a3 * v3_l;
+        ic1eq_l = 2.0f * v1_l - ic1eq_l;
+        ic2eq_l = 2.0f * v2_l - ic2eq_l;
+        samples_l[i] = v2_l;
+
+        // Правый канал
+        float v3_r = samples_r[i] - ic2eq_r;
+        float v1_r = a1 * ic1eq_r + a2 * v3_r;
+        float v2_r = ic2eq_r + a2 * ic1eq_r + a3 * v3_r;
+        ic1eq_r = 2.0f * v1_r - ic1eq_r;
+        ic2eq_r = 2.0f * v2_r - ic2eq_r;
+        samples_r[i] = v2_r;
     }
 }

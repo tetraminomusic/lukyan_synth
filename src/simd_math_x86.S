@@ -5,6 +5,8 @@
     .global simd_grain_accumulate_stereo
     .global _simd_lerp_block
     .global simd_lerp_block
+    .global _simd_svf_process_stereo
+    .global simd_svf_process_stereo
 
 // Пусть для маков точка входа будет с нижним подчёркиваем, а для линукса без
 
@@ -52,3 +54,44 @@ simd_grain_accumulate_stereo:
     vzeroupper
     ret
 
+
+_simd_lerp_block:
+simd_lerp_block:
+    vbroadcastss %xmm0, %ymm0
+    
+    vmovaps .LC_ONE(%rip), %ymm1
+    vsubps %ymm0, %ymm1, %ymm1
+
+    shr $3, %rcx
+    test %rcx, %rcx
+    jz .Lend_lerp
+
+.Lloop_lerp:
+    vmovups (%rsi), %ymm2
+    vmovups (%rdx), %ymm3
+    vmulps %ymm1, %ymm2, %ymm4
+    
+    vfmadd231ps %ymm0, %ymm3, %ymm4
+
+    vmovups %ymm4, (%rdi)
+
+    add $32, %rdi
+    add $32, %rsi
+    add $32, %rdx
+
+    dec %rcx
+    jnz .Lloop_lerp
+
+.Lend_lerp:
+    vzeroupper
+    ret
+
+    .section .rodata
+    .align 32
+.LC_ONE:
+    .float 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
+
+
+_simd_svf_process_stereo:
+simd_svf_process_stereo:
+    ret
