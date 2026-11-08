@@ -3,6 +3,8 @@
     .global simd_clear_block_stereo
     .global _simd_grain_accumulate_stereo
     .global simd_grain_accumulate_stereo
+    .global _simd_lerp_block
+    .global simd_lerp_block
 
 // Пусть для маков точка входа будет с нижним подчёркиваем, а для линукса без
 
