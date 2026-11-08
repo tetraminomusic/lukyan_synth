@@ -1,5 +1,6 @@
 #include "fx.h"
 #include "fast_math.h"
+#include "simd_math.h"
 #include <math.h>
 
 #define PI 3.14159265358979323846
@@ -56,11 +57,11 @@ static float read_delay(const float *buffer, float read_pos) {
 }
 
 void fx_process(FxState *state, const FxParams *params, float *out_l, float *out_r, float sample_rate) {
-    float sr = (sample_rate > 0.0f) ? sample_rate : 44100.0f;
-
+    // Усиление
     float raw_l = fast_tanhf(*out_l * 2.0f) * 0.95f * params->gain;
     float raw_r = fast_tanhf(*out_r * 2.0f) * 0.95f * params->gain;
 
+    // Lo-Fi
     if (params->downsample > 1.05f) {
         state->ds_counter += 1.0f;
         if (state->ds_counter >= params->downsample) {
@@ -77,28 +78,12 @@ void fx_process(FxState *state, const FxParams *params, float *out_l, float *out
         raw_r = roundf(raw_r * levels) / levels;
     }
 
-    float g = tanf(PI * params->cutoff_hz / sr);
-    float k = 1.0f / params->resonance;
-    float a1 = 1.0f / (1.0f + g * (g + k));
-    float a2 = g * a1;
-    float a3 = g * a2;
+    simd_svf_process_stereo(&raw_l, &raw_r, 1, params->cutoff_hz, params->resonance, sample_rate);
+    float filtered_l = raw_l;
+    float filtered_r = raw_r;
 
-    float v3_l = raw_l - state->ic2eq_l;
-    float v1_l = a1 * state->ic1eq_l + a2 * v3_l;
-    float v2_l = state->ic2eq_l + a2 * state->ic1eq_l + a3 * v3_l;
-    state->ic1eq_l = 2.0f * v1_l - state->ic1eq_l;
-    state->ic2eq_l = 2.0f * v2_l - state->ic2eq_l;
-
-    float v3_r = raw_r - state->ic2eq_r;
-    float v1_r = a1 * state->ic1eq_r + a2 * v3_r;
-    float v2_r = state->ic2eq_r + a2 * state->ic1eq_r + a3 * v3_r;
-    state->ic1eq_r = 2.0f * v1_r - state->ic1eq_r;
-    state->ic2eq_r = 2.0f * v2_r - state->ic2eq_r;
-
-    float filtered_l = v2_l;
-    float filtered_r = v2_r;
-
-    state->phaser_lfo_phase += (2.0f * (float)PI * params->phaser_rate_hz) / sr;
+    // Phaser
+    state->phaser_lfo_phase += (2.0f * (float)PI * params->phaser_rate_hz) / sample_rate;
     if (state->phaser_lfo_phase > 2.0f * PI) state->phaser_lfo_phase -= 2.0f * PI;
 
     float ph_lfo_l = (sinf(state->phaser_lfo_phase) + 1.0f) * 0.5f;
@@ -107,14 +92,13 @@ void fx_process(FxState *state, const FxParams *params, float *out_l, float *out
     float sweep_l = 400.0f + (4000.0f - 400.0f) * ph_lfo_l * params->phaser_depth;
     float sweep_r = 400.0f + (4000.0f - 400.0f) * ph_lfo_r * params->phaser_depth;
 
-    float apf_a_l = (tanf(PI * sweep_l / sr) - 1.0f) / (tanf(PI * sweep_l / sr) + 1.0f);
-    float apf_a_r = (tanf(PI * sweep_r / sr) - 1.0f) / (tanf(PI * sweep_r / sr) + 1.0f);
+    float apf_a_l = (tanf(PI * sweep_l / sample_rate) - 1.0f) / (tanf(PI * sweep_l / sample_rate) + 1.0f);
+    float apf_a_r = (tanf(PI * sweep_r / sample_rate) - 1.0f) / (tanf(PI * sweep_r / sample_rate) + 1.0f);
 
     float p_in_l = filtered_l + state->phaser_y_l[3] * params->phaser_feedback;
     for (int i = 0; i < 4; ++i) {
         float out = apf_a_l * p_in_l + state->phaser_x_l[i] - apf_a_l * state->phaser_y_l[i];
-        state->phaser_x_l[i] = p_in_l;
-        state->phaser_y_l[i] = out;
+        state->phaser_x_l[i] = p_in_l; state->phaser_y_l[i] = out;
         p_in_l = out;
     }
     float phaser_out_l = filtered_l * (1.0f - params->phaser_mix) + p_in_l * params->phaser_mix;
@@ -122,44 +106,35 @@ void fx_process(FxState *state, const FxParams *params, float *out_l, float *out
     float p_in_r = filtered_r + state->phaser_y_r[3] * params->phaser_feedback;
     for (int i = 0; i < 4; ++i) {
         float out = apf_a_r * p_in_r + state->phaser_x_r[i] - apf_a_r * state->phaser_y_r[i];
-        state->phaser_x_r[i] = p_in_r;
-        state->phaser_y_r[i] = out;
+        state->phaser_x_r[i] = p_in_r; state->phaser_y_r[i] = out;
         p_in_r = out;
     }
     float phaser_out_r = filtered_r * (1.0f - params->phaser_mix) + p_in_r * params->phaser_mix;
 
+    // Chorus
     state->chorus_buf_l[state->write_pos] = phaser_out_l;
     state->chorus_buf_r[state->write_pos] = phaser_out_r;
-
-    state->chorus_lfo_phase += (2.0f * (float)PI * params->chorus_rate_hz) / sr;
+    state->chorus_lfo_phase += (2.0f * (float)PI * params->chorus_rate_hz) / sample_rate;
     if (state->chorus_lfo_phase > 2.0f * PI) state->chorus_lfo_phase -= 2.0f * PI;
 
-    float ch_lfo_l = sinf(state->chorus_lfo_phase);
-    float ch_lfo_r = sinf(state->chorus_lfo_phase + PI * 0.5f);
+    float delay_l = 0.015f * sample_rate + sinf(state->chorus_lfo_phase) * (params->chorus_depth_ms / 1000.0f * sample_rate);
+    float delay_r = 0.015f * sample_rate + sinf(state->chorus_lfo_phase + PI * 0.5f) * (params->chorus_depth_ms / 1000.0f * sample_rate);
 
-    float base_delay_samples = 0.015f * sr; 
-    float mod_samples = (params->chorus_depth_ms / 1000.0f) * sr;
+    float read_l = (float)state->write_pos - delay_l;
+    while (read_l < 0.0f) read_l += CHORUS_BUFFER_SIZE;
+    float read_r = (float)state->write_pos - delay_r;
+    while (read_r < 0.0f) read_r += CHORUS_BUFFER_SIZE;
 
-    float delay_l = base_delay_samples + ch_lfo_l * mod_samples;
-    float delay_r = base_delay_samples + ch_lfo_r * mod_samples;
-
-    float read_pos_l = (float)state->write_pos - delay_l;
-    while (read_pos_l < 0.0f) read_pos_l += CHORUS_BUFFER_SIZE;
-    
-    float read_pos_r = (float)state->write_pos - delay_r;
-    while (read_pos_r < 0.0f) read_pos_r += CHORUS_BUFFER_SIZE;
-
-    float chorus_l = read_delay(state->chorus_buf_l, read_pos_l);
-    float chorus_r = read_delay(state->chorus_buf_r, read_pos_r);
-
+    float chorus_l = read_delay(state->chorus_buf_l, read_l);
+    float chorus_r = read_delay(state->chorus_buf_r, read_r);
     state->write_pos = (state->write_pos + 1) % CHORUS_BUFFER_SIZE;
 
     float dry_rev_l = phaser_out_l * (1.0f - params->chorus_mix) + chorus_l * params->chorus_mix;
     float dry_rev_r = phaser_out_r * (1.0f - params->chorus_mix) + chorus_r * params->chorus_mix;
 
+    // Reverb
     float rev_in = (dry_rev_l + dry_rev_r) * 0.015f;
-    float comb_sum_l = 0.0f;
-    float comb_sum_r = 0.0f;
+    float comb_sum_l = 0.0f, comb_sum_r = 0.0f;
 
     for (int c = 0; c < NUM_COMB; ++c) {
         int size_l = COMB_TUNINGS_L[c];
@@ -177,22 +152,18 @@ void fx_process(FxState *state, const FxParams *params, float *out_l, float *out
         comb_sum_r += out_c_r;
     }
 
-    float apf_l = comb_sum_l;
-    float apf_r = comb_sum_r;
-
+    float apf_l = comb_sum_l, apf_r = comb_sum_r;
     for (int a = 0; a < NUM_APF; ++a) {
-        int size_l = APF_TUNINGS_L[a];
-        float buf_out_l = state->apf_buf_l[a][state->apf_pos_l[a]];
-        float new_apf_l = -0.5f * apf_l + buf_out_l;
-        state->apf_buf_l[a][state->apf_pos_l[a]] = apf_l + 0.5f * buf_out_l;
-        state->apf_pos_l[a] = (state->apf_pos_l[a] + 1) % size_l;
+        float buf_l = state->apf_buf_l[a][state->apf_pos_l[a]];
+        float new_apf_l = -0.5f * apf_l + buf_l;
+        state->apf_buf_l[a][state->apf_pos_l[a]] = apf_l + 0.5f * buf_l;
+        state->apf_pos_l[a] = (state->apf_pos_l[a] + 1) % APF_TUNINGS_L[a];
         apf_l = new_apf_l;
 
-        int size_r = APF_TUNINGS_R[a];
-        float buf_out_r = state->apf_buf_r[a][state->apf_pos_r[a]];
-        float new_apf_r = -0.5f * apf_r + buf_out_r;
-        state->apf_buf_r[a][state->apf_pos_r[a]] = apf_r + 0.5f * buf_out_r;
-        state->apf_pos_r[a] = (state->apf_pos_r[a] + 1) % size_r;
+        float buf_r = state->apf_buf_r[a][state->apf_pos_r[a]];
+        float new_apf_r = -0.5f * apf_r + buf_r;
+        state->apf_buf_r[a][state->apf_pos_r[a]] = apf_r + 0.5f * buf_r;
+        state->apf_pos_r[a] = (state->apf_pos_r[a] + 1) % APF_TUNINGS_R[a];
         apf_r = new_apf_r;
     }
 
