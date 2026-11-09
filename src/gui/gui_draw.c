@@ -40,26 +40,26 @@ static const uint8_t FONT_5X7[95][5] = {
     {0x00, 0x41, 0x36, 0x08, 0x00}, {0x08, 0x08, 0x2A, 0x1C, 0x08}
 };
 
-static const uint8_t GLYPH_B[5] = {0x7F, 0x49, 0x49, 0x49, 0x31}; // Б
-static const uint8_t GLYPH_G[5] = {0x7F, 0x01, 0x01, 0x01, 0x01}; // Г
-static const uint8_t GLYPH_D[5] = {0x60, 0x3F, 0x21, 0x3F, 0x60}; // Д
-static const uint8_t GLYPH_ZH[5] = {0x49, 0x2A, 0x7F, 0x2A, 0x49}; // Ж
-static const uint8_t GLYPH_Z[5] = {0x22, 0x49, 0x49, 0x49, 0x36}; // З
-static const uint8_t GLYPH_I[5] = {0x7F, 0x10, 0x08, 0x04, 0x7F}; // И
-static const uint8_t GLYPH_YI[5] = {0x7F, 0x12, 0x09, 0x04, 0x7F}; // Й
-static const uint8_t GLYPH_L[5] = {0x60, 0x1F, 0x01, 0x01, 0x7F}; // Л
-static const uint8_t GLYPH_P[5] = {0x7F, 0x01, 0x01, 0x01, 0x7F}; // П
-static const uint8_t GLYPH_F[5] = {0x1C, 0x22, 0x7F, 0x22, 0x1C}; // Ф
-static const uint8_t GLYPH_TS[5] = {0x3F, 0x20, 0x20, 0x3F, 0xC0}; // Ц
-static const uint8_t GLYPH_CH[5] = {0x0F, 0x08, 0x08, 0x08, 0x7F}; // Ч
-static const uint8_t GLYPH_SH[5] = {0x7F, 0x40, 0x7F, 0x40, 0x7F}; // Ш
-static const uint8_t GLYPH_SHCH[5] = {0x3F, 0x20, 0x3F, 0x20, 0xE0}; // Щ
-static const uint8_t GLYPH_HARD[5] = {0x01, 0x7F, 0x48, 0x48, 0x30}; // Ъ
-static const uint8_t GLYPH_Y[5] = {0x7F, 0x48, 0x30, 0x00, 0x7F}; // Ы
-static const uint8_t GLYPH_SOFT[5] = {0x7F, 0x48, 0x48, 0x48, 0x30}; // Ь
-static const uint8_t GLYPH_EE[5] = {0x22, 0x49, 0x49, 0x41, 0x3E}; // Э
-static const uint8_t GLYPH_YU[5] = {0x7F, 0x08, 0x3E, 0x41, 0x3E}; // Ю
-static const uint8_t GLYPH_YA[5] = {0x46, 0x29, 0x19, 0x09, 0x7F}; // Я
+static const uint8_t GLYPH_B[5] = {0x7F, 0x49, 0x49, 0x49, 0x31};
+static const uint8_t GLYPH_G[5] = {0x7F, 0x01, 0x01, 0x01, 0x01};
+static const uint8_t GLYPH_D[5] = {0x60, 0x3F, 0x21, 0x3F, 0x60};
+static const uint8_t GLYPH_ZH[5] = {0x49, 0x2A, 0x7F, 0x2A, 0x49};
+static const uint8_t GLYPH_Z[5] = {0x22, 0x49, 0x49, 0x49, 0x36};
+static const uint8_t GLYPH_I[5] = {0x7F, 0x10, 0x08, 0x04, 0x7F};
+static const uint8_t GLYPH_YI[5] = {0x7F, 0x12, 0x09, 0x04, 0x7F};
+static const uint8_t GLYPH_L[5] = {0x60, 0x1F, 0x01, 0x01, 0x7F};
+static const uint8_t GLYPH_P[5] = {0x7F, 0x01, 0x01, 0x01, 0x7F};
+static const uint8_t GLYPH_F[5] = {0x1C, 0x22, 0x7F, 0x22, 0x1C};
+static const uint8_t GLYPH_TS[5] = {0x3F, 0x20, 0x20, 0x3F, 0xC0};
+static const uint8_t GLYPH_CH[5] = {0x0F, 0x08, 0x08, 0x08, 0x7F};
+static const uint8_t GLYPH_SH[5] = {0x7F, 0x40, 0x7F, 0x40, 0x7F};
+static const uint8_t GLYPH_SHCH[5] = {0x3F, 0x20, 0x3F, 0x20, 0xE0};
+static const uint8_t GLYPH_HARD[5] = {0x01, 0x7F, 0x48, 0x48, 0x30};
+static const uint8_t GLYPH_Y[5] = {0x7F, 0x48, 0x30, 0x00, 0x7F};
+static const uint8_t GLYPH_SOFT[5] = {0x7F, 0x48, 0x48, 0x48, 0x30};
+static const uint8_t GLYPH_EE[5] = {0x22, 0x49, 0x49, 0x41, 0x3E};
+static const uint8_t GLYPH_YU[5] = {0x7F, 0x08, 0x3E, 0x41, 0x3E};
+static const uint8_t GLYPH_YA[5] = {0x46, 0x29, 0x19, 0x09, 0x7F};
 
 void draw_copy_bg(uint32_t *dst, const uint32_t *src, int count) {
     memcpy(dst, src, count * sizeof(uint32_t));
@@ -81,7 +81,7 @@ void draw_rect_panel(uint32_t *pixels, int x, int y, int w, int h, uint32_t bg_c
         for (int px = x; px < x + w; ++px) {
             if (px < 0 || px >= FB_WIDTH) continue;
 
-            if (px < x + 2 || px >= x + w - 2 || py < y + 2 || py >= y + h - 2) {
+            if (px < x + 3 || px >= x + w - 3 || py < y + 3 || py >= y + h - 3) {
                 pixels[py * FB_WIDTH + px] = border_color;
             } else {
                 uint32_t bg = pixels[py * FB_WIDTH + px];
@@ -100,10 +100,7 @@ void draw_rect_panel(uint32_t *pixels, int x, int y, int w, int h, uint32_t bg_c
 }
 
 static const uint8_t *get_glyph(uint32_t cp) {
-    if (cp >= 32 && cp <= 126) {
-        return FONT_5X7[cp - 32];
-    }
-
+    if (cp >= 32 && cp <= 126) return FONT_5X7[cp - 32];
     if (cp >= 0x0430 && cp <= 0x044F) cp -= 0x20;
     if (cp == 0x0451) cp = 0x0401;
 
@@ -169,6 +166,25 @@ void draw_text(uint32_t *pixels, int x, int y, const char *str, uint32_t color) 
 
         const uint8_t *glyph = get_glyph(cp);
 
+        // Тень
+        for (int col = 0; col < 5; ++col) {
+            uint8_t line = glyph[col];
+            for (int row = 0; row < 7; ++row) {
+                if (line & (1 << row)) {
+                    for (int dy = 0; dy < GUI_SCALE; ++dy) {
+                        for (int dx = 0; dx < GUI_SCALE; ++dx) {
+                            int px = cur_x + col * GUI_SCALE + dx + 2;
+                            int py = base_y + row * GUI_SCALE + dy + 2;
+                            if (px >= 0 && px < FB_WIDTH && py >= 0 && py < FB_HEIGHT) {
+                                pixels[py * FB_WIDTH + px] = 0xD0000000;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Буквы
         for (int col = 0; col < 5; ++col) {
             uint8_t line = glyph[col];
             for (int row = 0; row < 7; ++row) {
