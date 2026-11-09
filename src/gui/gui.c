@@ -1,8 +1,10 @@
 #include "gui.h"
 #include "gui_draw.h"
 #include "parameters.h"
+#include "presets.h"
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -52,19 +54,15 @@ static const KnobLayout KNOBS_OSC[] = {
 static const KnobLayout KNOBS_FX[] = {
     { PARAM_CUTOFF, 80, 145, 22, "Обрезание", "Cutoff" },
     { PARAM_RESONANCE, 190, 145, 22, "Резонансик", "Res" },
-    
     { PARAM_CRUSH, 340, 145, 22, "Биты", "Bits" },
     { PARAM_DOWNSAMPLE, 450, 145, 22, "Частота", "Rate" },
-    
     { PARAM_PHASER_MIX, 568, 135, 17, "Смесь", "Mix" },
     { PARAM_PHASER_RATE, 626, 135, 17, "Частота", "Rate" },
     { PARAM_PHASER_DEPTH, 684, 135, 17, "Дно", "Depth" },
     { PARAM_PHASER_FEEDBACK, 742, 135, 17, "Fbk", "Fbk" },
-    
     { PARAM_CHORUS_MIX, 80, 370, 22, "Смесь", "Mix" },
     { PARAM_CHORUS_RATE, 195, 370, 22, "Частота", "Rate" },
     { PARAM_CHORUS_DEPTH, 310, 370, 22, "Дно", "Depth" },
-    
     { PARAM_REVERB_MIX, 480, 370, 22, "Смесь", "Mix" },
     { PARAM_REVERB_SIZE, 595, 370, 22, "Размер", "Size" },
     { PARAM_REVERB_DAMP, 710, 370, 22, "Сырость", "Damp" }
@@ -84,16 +82,28 @@ void gui_init(GuiState *gui) {
 
     if (data && img_w > 0 && img_h > 0) {
         for (int y = 0; y < FB_HEIGHT; ++y) {
+            float v = ((float)y / (float)FB_HEIGHT) * (float)(img_h - 1);
+            int y0 = (int)v;
+            int y1 = (y0 < img_h - 1) ? y0 + 1 : y0;
+            float fy = v - (float)y0;
+
             for (int x = 0; x < FB_WIDTH; ++x) {
-                int src_x = (x * img_w) / FB_WIDTH;
-                int src_y = (y * img_h) / FB_HEIGHT;
-                int idx = (src_y * img_w + src_x) * 4;
+                float u = ((float)x / (float)FB_WIDTH) * (float)(img_w - 1);
+                int x0 = (int)u;
+                int x1 = (x0 < img_w - 1) ? x0 + 1 : x0;
+                float fx = u - (float)x0;
 
-                uint8_t r = (uint8_t)(data[idx] * 0.45f);
-                uint8_t g = (uint8_t)(data[idx + 1] * 0.45f);
-                uint8_t b = (uint8_t)(data[idx + 2] * 0.45f);
+                int i00 = (y0 * img_w + x0) * 4;
+                int i10 = (y0 * img_w + x1) * 4;
+                int i01 = (y1 * img_w + x0) * 4;
+                int i11 = (y1 * img_w + x1) * 4;
 
-                gui->bg_pixels[y * FB_WIDTH + x] = (0xFF << 24) | (r << 16) | (g << 8) | b;
+                float r = (data[i00] * (1.0f - fx) + data[i10] * fx) * (1.0f - fy) + (data[i01] * (1.0f - fx) + data[i11] * fx) * fy;
+                float g = (data[i00 + 1] * (1.0f - fx) + data[i10 + 1] * fx) * (1.0f - fy) + (data[i01 + 1] * (1.0f - fx) + data[i11 + 1] * fx) * fy;
+                float b = (data[i00 + 2] * (1.0f - fx) + data[i10 + 2] * fx) * (1.0f - fy) + (data[i01 + 2] * (1.0f - fx) + data[i11 + 2] * fx) * fy;
+
+                r *= 0.45f; g *= 0.45f; b *= 0.45f;
+                gui->bg_pixels[y * FB_WIDTH + x] = (0xFF << 24) | ((uint8_t)r << 16) | ((uint8_t)g << 8) | (uint8_t)b;
             }
         }
         stbi_image_free(data);
@@ -176,31 +186,57 @@ static void draw_tab_fx(GranularSynth *synth) {
     }
 }
 
+static void draw_tab_presets(GranularSynth *synth) {
+    uint32_t *px = synth->gui.pixels;
+    bool is_ru = (synth->gui.current_lang == LANG_MEME_RU);
+
+    draw_rect_panel(px, 20, 70, 440, 500, 0xB0181A1F, 0xFF3E4451);
+    draw_text(px, 35, 85, is_ru ? "ВСТРОЕННЫЕ ШЕДЕВРЫ (FACTORY)" : "FACTORY PRESETS", 0xFF61AFEF);
+
+    draw_rect_panel(px, 490, 70, 450, 500, 0xB0181A1F, 0xFF3E4451);
+    draw_text(px, 505, 85, is_ru ? "СВОИ ПАЦАНСКИЕ (USER)" : "USER QUICK SLOTS", 0xFF98C379);
+
+    for (int i = 0; i < NUM_FACTORY_PRESETS; ++i) {
+        int y = 140 + i * 50;
+        draw_button(px, 35, y, 410, 36, g_factory_presets[i].name, false);
+    }
+
+    for (int i = 0; i < NUM_USER_PRESETS; ++i) {
+        int y = 140 + i * 50;
+        char label[32];
+        snprintf(label, sizeof(label), is_ru ? "Слот %d" : "Slot %d", i + 1);
+        draw_text(px, 505, y + 10, label, 0xFFFFFFFF);
+
+        draw_button(px, 620, y, 140, 32, is_ru ? "Загрузить" : "Load", false);
+        draw_button(px, 780, y, 140, 32, is_ru ? "Сохранить" : "Save", false);
+    }
+}
+
 void gui_render_frame(GranularSynth *synth) {
     if (!synth || !synth->gui.is_open || !synth->gui.native_view) return;
 
     draw_copy_bg(synth->gui.pixels, synth->gui.bg_pixels, FB_WIDTH * FB_HEIGHT);
 
-    draw_rect_panel(synth->gui.pixels, 0, 0, GUI_WIDTH, 50, 0xD0181A1F, 0xFF282C34);
+    draw_rect_panel(synth->gui.pixels, 0, 0, GUI_WIDTH, 55, 0xE0181A1F, 0xFF282C34);
 
     bool is_ru = (synth->gui.current_lang == LANG_MEME_RU);
     if (is_ru) {
-        draw_text(synth->gui.pixels, 15, 20, "ЛУКЬЯНЧИК СИНТ", 0xFFE5C07B);
-        draw_text(synth->gui.pixels, 120, 20, "// ЛЕГЕНДАРНЫЙ ШЛЯГЕРНЫЙ СИНТ", 0xFF5C6370);
+        draw_text(synth->gui.pixels, 20, 22, "ЛУКЬЯНЧИК СИНТ", 0xFFE5C07B);
+        draw_text(synth->gui.pixels, 130, 22, "// ЛЕГЕНДАРНЫЙ ШЛЯГЕРНЫЙ СИНТ", 0xFF5C6370);
     } else {
-        draw_text(synth->gui.pixels, 15, 20, "LUKYAN SYNTH", 0xFFE5C07B);
-        draw_text(synth->gui.pixels, 110, 20, "// GRANULAR POLYPHONIC SYNTH", 0xFF5C6370);
+        draw_text(synth->gui.pixels, 20, 22, "LUKYAN SYNTH", 0xFFE5C07B);
+        draw_text(synth->gui.pixels, 120, 22, "// GRANULAR POLYPHONIC SYNTH", 0xFF5C6370);
     }
 
-    draw_button(synth->gui.pixels, 370, 12, 85, 28, is_ru ? "Пацанский" : "ENG", true);
-    draw_button(synth->gui.pixels, 470, 12, 145, 28, is_ru ? "Генераторы" : "1. OSC & CORE", synth->gui.current_tab == TAB_OSC);
-    draw_button(synth->gui.pixels, 630, 12, 155, 28, is_ru ? "Спецэффекты" : "2. FX RACK", synth->gui.current_tab == TAB_FX);
+    // Идеально выверенные координаты кнопок навигации!
+    draw_button(synth->gui.pixels, 350, 14, 100, 30, is_ru ? "Пацанский" : "ENG", true);
+    draw_button(synth->gui.pixels, 465, 14, 150, 30, is_ru ? "Генераторы" : "1. OSC & CORE", synth->gui.current_tab == TAB_OSC);
+    draw_button(synth->gui.pixels, 625, 14, 150, 30, is_ru ? "Спецэффекты" : "2. FX RACK", synth->gui.current_tab == TAB_FX);
+    draw_button(synth->gui.pixels, 785, 14, 150, 30, is_ru ? "Пресеты" : "3. PRESETS", synth->gui.current_tab == TAB_PRESETS);
 
-    if (synth->gui.current_tab == TAB_OSC) {
-        draw_tab_osc(synth);
-    } else {
-        draw_tab_fx(synth);
-    }
+    if (synth->gui.current_tab == TAB_OSC) draw_tab_osc(synth);
+    else if (synth->gui.current_tab == TAB_FX) draw_tab_fx(synth);
+    else draw_tab_presets(synth);
 
 #if defined(__APPLE__)
     CGColorSpaceRef color_space = CGColorSpaceCreateDeviceRGB();
@@ -229,22 +265,12 @@ void gui_render_frame(GranularSynth *synth) {
 }
 
 void gui_handle_mouse_down(GranularSynth *synth, float mx, float my) {
-    if (my >= 12 && my <= 40) {
-        if (mx >= 370 && mx <= 455) {
-            synth->gui.current_lang = (synth->gui.current_lang == LANG_MEME_RU) ? LANG_EN : LANG_MEME_RU;
-            gui_render_frame(synth);
-            return;
-        }
-        if (mx >= 470 && mx <= 615) {
-            synth->gui.current_tab = TAB_OSC;
-            gui_render_frame(synth);
-            return;
-        }
-        if (mx >= 630 && mx <= 785) {
-            synth->gui.current_tab = TAB_FX;
-            gui_render_frame(synth);
-            return;
-        }
+    // ХИТБОКСЫ КНОПОК НАВИГАЦИИ (идеально совпадают с draw_button)
+    if (my >= 14 && my <= 44) {
+        if (mx >= 350 && mx <= 450) { synth->gui.current_lang = (synth->gui.current_lang == LANG_MEME_RU) ? LANG_EN : LANG_MEME_RU; gui_render_frame(synth); return; }
+        if (mx >= 465 && mx <= 615) { synth->gui.current_tab = TAB_OSC; gui_render_frame(synth); return; }
+        if (mx >= 625 && mx <= 775) { synth->gui.current_tab = TAB_FX; gui_render_frame(synth); return; }
+        if (mx >= 785 && mx <= 935) { synth->gui.current_tab = TAB_PRESETS; gui_render_frame(synth); return; }
     }
 
     int clicked_param = -1;
@@ -258,13 +284,37 @@ void gui_handle_mouse_down(GranularSynth *synth, float mx, float my) {
                 break;
             }
         }
-    } else {
+    } else if (synth->gui.current_tab == TAB_FX) {
         for (size_t i = 0; i < sizeof(KNOBS_FX) / sizeof(KNOBS_FX[0]); ++i) {
             float dx = mx - (float)KNOBS_FX[i].cx;
             float dy = my - (float)KNOBS_FX[i].cy;
             if (dx * dx + dy * dy <= (float)(KNOBS_FX[i].r * KNOBS_FX[i].r * 2)) {
                 clicked_param = KNOBS_FX[i].id;
                 break;
+            }
+        }
+    } else if (synth->gui.current_tab == TAB_PRESETS) {
+        // Хитбоксы фабричных пресетов
+        for (int i = 0; i < NUM_FACTORY_PRESETS; ++i) {
+            int y = 140 + i * 50;
+            if (mx >= 35 && mx <= 445 && my >= y && my <= y + 36) {
+                presets_load_state(synth, &g_factory_presets[i]);
+                gui_render_frame(synth);
+                return;
+            }
+        }
+        // Хитбоксы кнопок сохранения и загрузки (Точно соответствуют draw_button)
+        for (int i = 0; i < NUM_USER_PRESETS; ++i) {
+            int y = 140 + i * 50;
+            if (mx >= 620 && mx <= 760 && my >= y && my <= y + 32) {
+                presets_load_user_slot(synth, i);
+                gui_render_frame(synth);
+                return;
+            }
+            if (mx >= 780 && mx <= 920 && my >= y && my <= y + 32) {
+                presets_save_user_slot(synth, i);
+                gui_render_frame(synth);
+                return;
             }
         }
     }
@@ -354,7 +404,6 @@ static LRESULT CALLBACK win32_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
                 RECT rc;
                 GetClientRect(hwnd, &rc);
                 
-                // Включаем сглаживание и субпиксельную интерполяцию GDI
                 SetStretchBltMode(hdc, HALFTONE);
                 SetBrushOrgEx(hdc, 0, 0, NULL);
 
