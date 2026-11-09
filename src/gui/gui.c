@@ -4,7 +4,6 @@
 #include "presets.h"
 #include <string.h>
 #include <stdlib.h>
-#include <math.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -16,6 +15,7 @@
 #include <objc/message.h>
 #elif defined(_WIN32)
 #include <windows.h>
+#include <commdlg.h>
 #endif
 
 typedef struct {
@@ -31,19 +31,15 @@ static const KnobLayout KNOBS_OSC[] = {
     { PARAM_OSC1_GAIN, 65, 140, 20, "Получить", "Gain" },
     { PARAM_OSC1_SEMI, 137, 140, 20, "Половина", "Semi" },
     { PARAM_OSC1_MORPH, 210, 140, 20, "Форма", "Morph" },
-    
     { PARAM_OSC2_GAIN, 325, 140, 20, "Получить", "Gain" },
     { PARAM_OSC2_SEMI, 397, 140, 20, "Половина", "Semi" },
     { PARAM_OSC2_MORPH, 470, 140, 20, "Форма", "Morph" },
-    
     { PARAM_OSC3_GAIN, 585, 140, 20, "Получить", "Gain" },
     { PARAM_OSC3_SEMI, 660, 140, 20, "Половина", "Semi" },
     { PARAM_OSC3_MORPH, 735, 140, 20, "Форма", "Morph" },
-    
     { PARAM_GRAIN_SIZE, 80, 385, 22, "Размер", "Size" },
     { PARAM_DENSITY, 200, 385, 22, "Плотность", "Density" },
     { PARAM_SPRAY, 320, 385, 22, "Спрей", "Spray" },
-    
     { PARAM_ATTACK, 456, 370, 18, "Нападение", "Attack" },
     { PARAM_DECAY, 527, 370, 18, "Спад", "Decay" },
     { PARAM_SUSTAIN, 598, 370, 18, "Сустейн", "Sustain" },
@@ -190,49 +186,40 @@ static void draw_tab_presets(GranularSynth *synth) {
     uint32_t *px = synth->gui.pixels;
     bool is_ru = (synth->gui.current_lang == LANG_MEME_RU);
 
-    draw_rect_panel(px, 20, 70, 440, 500, 0xB0181A1F, 0xFF3E4451);
-    draw_text(px, 35, 85, is_ru ? "ВСТРОЕННЫЕ ШЕДЕВРЫ (FACTORY)" : "FACTORY PRESETS", 0xFF61AFEF);
-
-    draw_rect_panel(px, 490, 70, 450, 500, 0xB0181A1F, 0xFF3E4451);
-    draw_text(px, 505, 85, is_ru ? "СВОИ ПАЦАНСКИЕ (USER)" : "USER QUICK SLOTS", 0xFF98C379);
+    draw_rect_panel(px, 50, 100, 400, 400, 0xB0181A1F, 0xFF3E4451);
+    draw_text(px, 80, 130, is_ru ? "ВСТРОЕННЫЕ ШЕДЕВРЫ (FACTORY)" : "FACTORY PRESETS", 0xFF61AFEF);
 
     for (int i = 0; i < NUM_FACTORY_PRESETS; ++i) {
-        int y = 140 + i * 50;
-        draw_button(px, 35, y, 410, 36, g_factory_presets[i].name, false);
+        int y = 180 + i * 60;
+        draw_button(px, 80, y, 340, 40, g_factory_presets[i].name, false);
     }
 
-    for (int i = 0; i < NUM_USER_PRESETS; ++i) {
-        int y = 140 + i * 50;
-        char label[32];
-        snprintf(label, sizeof(label), is_ru ? "Слот %d" : "Slot %d", i + 1);
-        draw_text(px, 505, y + 10, label, 0xFFFFFFFF);
+    draw_rect_panel(px, 510, 100, 400, 400, 0xB0181A1F, 0xFF3E4451);
+    draw_text(px, 540, 130, is_ru ? "УПРАВЛЕНИЕ ФАЙЛАМИ (FILE I/O)" : "DISK FILE BROWSER", 0xFF98C379);
 
-        draw_button(px, 620, y, 140, 32, is_ru ? "Загрузить" : "Load", false);
-        draw_button(px, 780, y, 140, 32, is_ru ? "Сохранить" : "Save", false);
-    }
+    draw_button(px, 560, 230, 300, 50, is_ru ? "Загрузить с компьютера..." : "Load from disk...", false);
+    draw_button(px, 560, 320, 300, 50, is_ru ? "Сохранить на компьютер..." : "Save to disk...", false);
 }
 
 void gui_render_frame(GranularSynth *synth) {
     if (!synth || !synth->gui.is_open || !synth->gui.native_view) return;
 
     draw_copy_bg(synth->gui.pixels, synth->gui.bg_pixels, FB_WIDTH * FB_HEIGHT);
-
     draw_rect_panel(synth->gui.pixels, 0, 0, GUI_WIDTH, 55, 0xE0181A1F, 0xFF282C34);
 
     bool is_ru = (synth->gui.current_lang == LANG_MEME_RU);
     if (is_ru) {
         draw_text(synth->gui.pixels, 20, 22, "ЛУКЬЯНЧИК СИНТ", 0xFFE5C07B);
-        draw_text(synth->gui.pixels, 130, 22, "// ЛЕГЕНДАРНЫЙ ШЛЯГЕРНЫЙ СИНТ", 0xFF5C6370);
+        draw_text(synth->gui.pixels, 130, 22, "// ШЛЯГЕР", 0xFF5C6370);
     } else {
         draw_text(synth->gui.pixels, 20, 22, "LUKYAN SYNTH", 0xFFE5C07B);
-        draw_text(synth->gui.pixels, 120, 22, "// GRANULAR POLYPHONIC SYNTH", 0xFF5C6370);
+        draw_text(synth->gui.pixels, 120, 22, "// SYNTHESIZER", 0xFF5C6370);
     }
 
-    // Идеально выверенные координаты кнопок навигации!
-    draw_button(synth->gui.pixels, 350, 14, 100, 30, is_ru ? "Пацанский" : "ENG", true);
-    draw_button(synth->gui.pixels, 465, 14, 150, 30, is_ru ? "Генераторы" : "1. OSC & CORE", synth->gui.current_tab == TAB_OSC);
-    draw_button(synth->gui.pixels, 625, 14, 150, 30, is_ru ? "Спецэффекты" : "2. FX RACK", synth->gui.current_tab == TAB_FX);
-    draw_button(synth->gui.pixels, 785, 14, 150, 30, is_ru ? "Пресеты" : "3. PRESETS", synth->gui.current_tab == TAB_PRESETS);
+    draw_button(synth->gui.pixels, 360, 14, 90, 30, is_ru ? "Пацанский" : "ENG", true);
+    draw_button(synth->gui.pixels, 460, 14, 140, 30, is_ru ? "Генераторы" : "1. OSC", synth->gui.current_tab == TAB_OSC);
+    draw_button(synth->gui.pixels, 610, 14, 140, 30, is_ru ? "Спецэффекты" : "2. FX", synth->gui.current_tab == TAB_FX);
+    draw_button(synth->gui.pixels, 760, 14, 140, 30, is_ru ? "Пресеты" : "3. PRESETS", synth->gui.current_tab == TAB_PRESETS);
 
     if (synth->gui.current_tab == TAB_OSC) draw_tab_osc(synth);
     else if (synth->gui.current_tab == TAB_FX) draw_tab_fx(synth);
@@ -264,13 +251,56 @@ void gui_render_frame(GranularSynth *synth) {
 #endif
 }
 
+static void open_file_dialog(GranularSynth *synth, bool is_save) {
+#if defined(__APPLE__)
+    Class panelClass = objc_getClass(is_save ? "NSSavePanel" : "NSOpenPanel");
+    id panel = ((id (*)(id, SEL))objc_msgSend)((id)panelClass, sel_registerName("openPanel"));
+    
+    if (is_save) {
+        ((void (*)(id, SEL, id))objc_msgSend)(panel, sel_registerName("setNameFieldStringValue:"), 
+            ((id (*)(Class, SEL, const char *))objc_msgSend)(objc_getClass("NSString"), sel_registerName("stringWithUTF8String:"), "preset.lukyan"));
+    } else {
+        ((void (*)(id, SEL, BOOL))objc_msgSend)(panel, sel_registerName("setCanChooseFiles:"), (BOOL)1);
+        ((void (*)(id, SEL, BOOL))objc_msgSend)(panel, sel_registerName("setCanChooseDirectories:"), (BOOL)0);
+    }
+
+    long modalResponse = ((long (*)(id, SEL))objc_msgSend)(panel, sel_registerName("runModal"));
+    if (modalResponse == 1) { // 1 = NSModalResponseOK
+        id url = ((id (*)(id, SEL))objc_msgSend)(panel, sel_registerName("URL"));
+        id pathStr = ((id (*)(id, SEL))objc_msgSend)(url, sel_registerName("path"));
+        const char *path = ((const char * (*)(id, SEL))objc_msgSend)(pathStr, sel_registerName("UTF8String"));
+        if (path) {
+            if (is_save) presets_save_to_file(synth, path);
+            else presets_load_from_file(synth, path);
+        }
+    }
+#elif defined(_WIN32)
+    HWND hwnd = (HWND)synth->gui.native_view;
+    char filename[260] = {0};
+    OPENFILENAME ofn;
+    memset(&ofn, 0, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = hwnd;
+    ofn.lpstrFile = filename;
+    ofn.nMaxFile = sizeof(filename);
+    ofn.lpstrFilter = "Lukyan Presets (*.lukyan)\0*.lukyan\0All Files (*.*)\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | (is_save ? OFN_OVERWRITEPROMPT : 0);
+
+    bool success = is_save ? GetSaveFileName(&ofn) : GetOpenFileName(&ofn);
+    if (success) {
+        if (is_save) presets_save_to_file(synth, filename);
+        else presets_load_from_file(synth, filename);
+    }
+#endif
+}
+
 void gui_handle_mouse_down(GranularSynth *synth, float mx, float my) {
-    // ХИТБОКСЫ КНОПОК НАВИГАЦИИ (идеально совпадают с draw_button)
     if (my >= 14 && my <= 44) {
-        if (mx >= 350 && mx <= 450) { synth->gui.current_lang = (synth->gui.current_lang == LANG_MEME_RU) ? LANG_EN : LANG_MEME_RU; gui_render_frame(synth); return; }
-        if (mx >= 465 && mx <= 615) { synth->gui.current_tab = TAB_OSC; gui_render_frame(synth); return; }
-        if (mx >= 625 && mx <= 775) { synth->gui.current_tab = TAB_FX; gui_render_frame(synth); return; }
-        if (mx >= 785 && mx <= 935) { synth->gui.current_tab = TAB_PRESETS; gui_render_frame(synth); return; }
+        if (mx >= 360 && mx <= 450) { synth->gui.current_lang = (synth->gui.current_lang == LANG_MEME_RU) ? LANG_EN : LANG_MEME_RU; gui_render_frame(synth); return; }
+        if (mx >= 460 && mx <= 600) { synth->gui.current_tab = TAB_OSC; gui_render_frame(synth); return; }
+        if (mx >= 610 && mx <= 750) { synth->gui.current_tab = TAB_FX; gui_render_frame(synth); return; }
+        if (mx >= 760 && mx <= 900) { synth->gui.current_tab = TAB_PRESETS; gui_render_frame(synth); return; }
     }
 
     int clicked_param = -1;
@@ -294,28 +324,23 @@ void gui_handle_mouse_down(GranularSynth *synth, float mx, float my) {
             }
         }
     } else if (synth->gui.current_tab == TAB_PRESETS) {
-        // Хитбоксы фабричных пресетов
         for (int i = 0; i < NUM_FACTORY_PRESETS; ++i) {
-            int y = 140 + i * 50;
-            if (mx >= 35 && mx <= 445 && my >= y && my <= y + 36) {
+            int y = 180 + i * 60;
+            if (mx >= 80 && mx <= 420 && my >= y && my <= y + 40) {
                 presets_load_state(synth, &g_factory_presets[i]);
                 gui_render_frame(synth);
                 return;
             }
         }
-        // Хитбоксы кнопок сохранения и загрузки (Точно соответствуют draw_button)
-        for (int i = 0; i < NUM_USER_PRESETS; ++i) {
-            int y = 140 + i * 50;
-            if (mx >= 620 && mx <= 760 && my >= y && my <= y + 32) {
-                presets_load_user_slot(synth, i);
-                gui_render_frame(synth);
-                return;
-            }
-            if (mx >= 780 && mx <= 920 && my >= y && my <= y + 32) {
-                presets_save_user_slot(synth, i);
-                gui_render_frame(synth);
-                return;
-            }
+        if (mx >= 560 && mx <= 860 && my >= 230 && my <= 280) {
+            open_file_dialog(synth, false);
+            gui_render_frame(synth);
+            return;
+        }
+        if (mx >= 560 && mx <= 860 && my >= 320 && my <= 370) {
+            open_file_dialog(synth, true);
+            gui_render_frame(synth);
+            return;
         }
     }
 
@@ -330,21 +355,14 @@ void gui_handle_mouse_down(GranularSynth *synth, float mx, float my) {
 void gui_handle_mouse_drag(GranularSynth *synth, float mx, float my) {
     (void)mx;
     if (synth->gui.active_param_id == -1) return;
-
     clap_param_info_t info;
     params_get_info(synth->gui.active_param_id, &info);
-
     float delta_y = synth->gui.drag_start_y - my;
     double range = info.max_value - info.min_value;
     double new_val = synth->gui.drag_start_val + (double)delta_y * (range / 150.0);
-
     if (new_val < info.min_value) new_val = info.min_value;
     if (new_val > info.max_value) new_val = info.max_value;
-
-    if (info.flags & CLAP_PARAM_IS_STEPPED) {
-        new_val = round(new_val);
-    }
-
+    if (info.flags & CLAP_PARAM_IS_STEPPED) new_val = round(new_val);
     params_apply_value(synth, synth->gui.active_param_id, new_val);
     gui_render_frame(synth);
 }
@@ -361,22 +379,18 @@ static void mac_mouse_down(id self, SEL _cmd, id event) {
     (void)_cmd;
     GranularSynth *synth = (GranularSynth *)objc_getAssociatedObject(self, "synth");
     if (!synth) return;
-
     CGPoint win_p = ((CGPoint (*)(id, SEL))objc_msgSend)(event, sel_registerName("locationInWindow"));
     CGPoint p = ((CGPoint (*)(id, SEL, CGPoint, id))objc_msgSend)(self, sel_registerName("convertPoint:fromView:"), win_p, (id)NULL);
     gui_handle_mouse_down(synth, (float)p.x, (float)(GUI_HEIGHT - p.y));
 }
-
 static void mac_mouse_dragged(id self, SEL _cmd, id event) {
     (void)_cmd;
     GranularSynth *synth = (GranularSynth *)objc_getAssociatedObject(self, "synth");
     if (!synth) return;
-
     CGPoint win_p = ((CGPoint (*)(id, SEL))objc_msgSend)(event, sel_registerName("locationInWindow"));
     CGPoint p = ((CGPoint (*)(id, SEL, CGPoint, id))objc_msgSend)(self, sel_registerName("convertPoint:fromView:"), win_p, (id)NULL);
     gui_handle_mouse_drag(synth, (float)p.x, (float)(GUI_HEIGHT - p.y));
 }
-
 static void mac_mouse_up(id self, SEL _cmd, id event) {
     (void)_cmd; (void)event;
     GranularSynth *synth = (GranularSynth *)objc_getAssociatedObject(self, "synth");
@@ -386,8 +400,7 @@ static void mac_mouse_up(id self, SEL _cmd, id event) {
 static LRESULT CALLBACK win32_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     GranularSynth *synth = (GranularSynth *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     switch (msg) {
-        case WM_ERASEBKGND:
-            return 1;
+        case WM_ERASEBKGND: return 1;
         case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
@@ -400,16 +413,11 @@ static LRESULT CALLBACK win32_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
                 bmi.bmiHeader.biPlanes = 1;
                 bmi.bmiHeader.biBitCount = 32;
                 bmi.bmiHeader.biCompression = BI_RGB;
-
                 RECT rc;
                 GetClientRect(hwnd, &rc);
-                
                 SetStretchBltMode(hdc, HALFTONE);
                 SetBrushOrgEx(hdc, 0, 0, NULL);
-
-                StretchDIBits(hdc, 0, 0, rc.right - rc.left, rc.bottom - rc.top,
-                              0, 0, FB_WIDTH, FB_HEIGHT,
-                              synth->gui.pixels, &bmi, DIB_RGB_COLORS, SRCCOPY);
+                StretchDIBits(hdc, 0, 0, rc.right - rc.left, rc.bottom - rc.top, 0, 0, FB_WIDTH, FB_HEIGHT, synth->gui.pixels, &bmi, DIB_RGB_COLORS, SRCCOPY);
             }
             EndPaint(hwnd, &ps);
             return 0;
