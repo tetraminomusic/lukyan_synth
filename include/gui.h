@@ -6,15 +6,16 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define GUI_WIDTH 800
-#define GUI_HEIGHT 500
+#define GUI_WIDTH 960
+#define GUI_HEIGHT 600
 #define GUI_SCALE 2
 #define FB_WIDTH (GUI_WIDTH * GUI_SCALE)
 #define FB_HEIGHT (GUI_HEIGHT * GUI_SCALE)
 
 typedef enum {
     TAB_OSC = 0,
-    TAB_FX
+    TAB_FX,
+    TAB_PRESETS
 } GuiTab;
 
 typedef enum {
