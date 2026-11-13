@@ -227,7 +227,7 @@ void gui_render_frame(GranularSynth *synth) {
     bool is_ru = (synth->gui.current_lang == LANG_MEME_RU);
     if (is_ru) {
         draw_text(synth->gui.pixels, 20, 22, "ЛУКЬЯНЧИК СИНТ", 0xFFE5C07B);
-        draw_text(synth->gui.pixels, 130, 22, "// ШЛЯГЕР", 0xFF5C6370);
+        draw_text(synth->gui.pixels, 130, 22, "// Легедарный шлягерный синт", 0xFF5C6370);
     } else {
         draw_text(synth->gui.pixels, 20, 22, "LUKYAN SYNTH", 0xFFE5C07B);
         draw_text(synth->gui.pixels, 120, 22, "// SYNTHESIZER", 0xFF5C6370);
@@ -271,25 +271,33 @@ void gui_render_frame(GranularSynth *synth) {
 static void open_file_dialog(GranularSynth *synth, bool is_save) {
 #if defined(__APPLE__)
     Class panelClass = objc_getClass(is_save ? "NSSavePanel" : "NSOpenPanel");
-    id panel = ((id (*)(id, SEL))objc_msgSend)((id)panelClass, sel_registerName("openPanel"));
+    SEL createSel = sel_registerName(is_save ? "savePanel" : "openPanel");
+    id panel = ((id (*)(id, SEL))objc_msgSend)((id)panelClass, createSel);
+    if (!panel) return;
     
     if (is_save) {
-        ((void (*)(id, SEL, id))objc_msgSend)(panel, sel_registerName("setNameFieldStringValue:"), 
-            ((id (*)(Class, SEL, const char *))objc_msgSend)(objc_getClass("NSString"), sel_registerName("stringWithUTF8String:"), "preset.lukyan"));
+        id defaultName = ((id (*)(Class, SEL, const char *))objc_msgSend)(
+            objc_getClass("NSString"), sel_registerName("stringWithUTF8String:"), "my_preset.lukyan");
+        ((void (*)(id, SEL, id))objc_msgSend)(panel, sel_registerName("setNameFieldStringValue:"), defaultName);
+        ((void (*)(id, SEL, BOOL))objc_msgSend)(panel, sel_registerName("setCanCreateDirectories:"), (BOOL)1);
     } else {
         ((void (*)(id, SEL, BOOL))objc_msgSend)(panel, sel_registerName("setCanChooseFiles:"), (BOOL)1);
         ((void (*)(id, SEL, BOOL))objc_msgSend)(panel, sel_registerName("setCanChooseDirectories:"), (BOOL)0);
     }
 
     long modalResponse = ((long (*)(id, SEL))objc_msgSend)(panel, sel_registerName("runModal"));
-    if (modalResponse == 1) { 
+    if (modalResponse == 1) {
         id url = ((id (*)(id, SEL))objc_msgSend)(panel, sel_registerName("URL"));
-        id pathStr = ((id (*)(id, SEL))objc_msgSend)(url, sel_registerName("path"));
-        const char *path = ((const char * (*)(id, SEL))objc_msgSend)(pathStr, sel_registerName("UTF8String"));
-        if (path) {
-            if (is_save) presets_save_to_file(synth, path);
-            else presets_load_from_file(synth, path);
-            update_preset_name(&synth->gui, path);
+        if (url) {
+            id pathStr = ((id (*)(id, SEL))objc_msgSend)(url, sel_registerName("path"));
+            if (pathStr) {
+                const char *path = ((const char * (*)(id, SEL))objc_msgSend)(pathStr, sel_registerName("UTF8String"));
+                if (path) {
+                    if (is_save) presets_save_to_file(synth, path);
+                    else presets_load_from_file(synth, path);
+                    update_preset_name(&synth->gui, path);
+                }
+            }
         }
     }
 #elif defined(_WIN32)
