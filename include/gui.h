@@ -35,6 +35,8 @@ typedef struct GuiState {
     int active_param_id;
     float drag_start_y;
     double drag_start_val;
+
+    char current_preset_name[64];
 } GuiState;
 
 struct GranularSynth;
