@@ -19,8 +19,11 @@ jobs:
       - name: Configure CMake
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
-      - name: Compile CLAP Plugin
+      - name: Compile CLAP Plugin & Tests
         run: cmake --build build --config Release
+
+      - name: Run Golden Tests (x86-64 AVX2 Verification)
+        run: ctest --test-dir build -C Release --output-on-failure
 
       - name: Clone and Build clap-wrapper
         run: |
@@ -33,7 +36,6 @@ jobs:
       - name: Package VST3 Plugin
         shell: bash
         run: |
-          # Автоматически находим скомпилированный бинарник обертки
           WRAPPER_FILE=$(find clap-wrapper/build -type f \( -name "clapasvst3.vst3" -o -name "clapasvst3.dll" -o -name "clapasvst3" \) | head -n 1)
           echo "Found wrapper binary at: $WRAPPER_FILE"
           
@@ -62,8 +64,11 @@ jobs:
       - name: Configure CMake
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
-      - name: Compile Plugin
+      - name: Compile Plugin & Tests
         run: cmake --build build --config Release
+
+      - name: Run Golden Tests
+        run: ctest --test-dir build -C Release --output-on-failure
 
       - name: Upload macOS Plugin
         uses: actions/upload-artifact@v4
