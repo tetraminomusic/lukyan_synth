@@ -6,6 +6,7 @@
 
 #include "parameters.h"
 #include "ports.h"
+#include "presets.h"
 #include "events.h"
 #include "gui.h"
 
@@ -75,6 +76,9 @@ static bool plugin_activate(const struct clap_plugin *plugin, double sample_rate
     if (synth->gui.is_open) {
         gui_render_frame(synth);
     }
+
+    params_init_defaults(synth);
+    presets_init_factory(synth);
 
     return true;
 }
@@ -163,6 +167,8 @@ static const clap_plugin_t* factory_create_plugin(const struct clap_plugin_facto
 
     GranularSynth *synth = (GranularSynth *)calloc(1, sizeof(GranularSynth));
     if (!synth) return NULL;
+
+    arena_init(&synth->arena, synth->memory_pool, PLUGIN_MEMORY_POOL_SIZE);
 
     synth->plugin = plugin_class;
     synth->plugin.desc = &plugin_descriptor;

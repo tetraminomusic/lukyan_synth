@@ -27,10 +27,12 @@ add_library(granular_synth MODULE
     src/dsp/fx.c
     src/dsp/parameters.c
     src/dsp/fast_math.c
+    src/dsp/arena.c 
     src/gui/gui.c
     src/gui/gui_draw.c
     src/platform/ports.c
     src/platform/events.c
+    src/platform/presets.c
     ${SIMD_SOURCE}
 )
 
