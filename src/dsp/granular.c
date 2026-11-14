@@ -2,6 +2,7 @@
 #include "simd_math.h"
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define PI 3.14159265358979323846
 #define BASE_ROOT_FREQ 110.0f
@@ -17,6 +18,7 @@ void granular_init(GranularEngine *engine, double sample_rate) {
     engine->sample_rate = sample_rate;
     engine->playhead = 0.0f;
     engine->next_voice_rr = 0;
+    engine->idle_tail_frames = 0;
 
     engine->grain_size_ms = 65.0f;
     engine->density = 30.0f;
@@ -50,6 +52,9 @@ void granular_init(GranularEngine *engine, double sample_rate) {
     engine->fx_params.chorus_mix = 0.0f;
     engine->fx_params.chorus_rate_hz = 1.2f;
     engine->fx_params.chorus_depth_ms = 5.0f;
+    engine->fx_params.reverb_mix = 0.0f;
+    engine->fx_params.reverb_size = 0.75f;
+    engine->fx_params.reverb_damp = 0.25f;
     engine->fx_params.crush_bits = 16.0f;
     engine->fx_params.downsample = 1.0f;
 
@@ -109,6 +114,8 @@ void granular_note_on(GranularEngine *engine, int32_t key, float frequency) {
     engine->voices[target_idx].frequency = frequency;
     engine->voices[target_idx].spawn_timer = 0.0f;
     adsr_voice_gate_on(&engine->voices[target_idx].adsr);
+
+    engine->idle_tail_frames = (uint32_t)(engine->sample_rate * 3.0f);
 }
 
 void granular_note_off(GranularEngine *engine, int32_t key) {
@@ -131,6 +138,7 @@ void granular_reset(GranularEngine *engine) {
     }
     engine->playhead = 0.0f;
     engine->next_voice_rr = 0;
+    engine->idle_tail_frames = 0;
     engine->pitch_bend_semitones = 0.0f;
     fx_state_init(&engine->fx_state);
 }
@@ -168,9 +176,30 @@ void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r) 
     (void)engine; (void)out_l; (void)out_r;
 }
 
-void granular_render_block(GranularEngine *engine, float *out_l, float *out_r, uint32_t frames) {
+bool granular_render_block(GranularEngine *engine, float *out_l, float *out_r, uint32_t frames) {
     const float sr = (engine->sample_rate > 0.0) ? (float)engine->sample_rate : 44100.0f;
     const float spawn_interval = (engine->density > 0.0f) ? (sr / engine->density) : 1000.0f;
+
+    bool active_signal = false;
+    for (int v = 0; v < MAX_VOICES; ++v) {
+        if (engine->voices[v].active) { active_signal = true; break; }
+    }
+    if (!active_signal) {
+        for (int g = 0; g < MAX_GRAINS; ++g) {
+            if (engine->grains[g].active) { active_signal = true; break; }
+        }
+    }
+
+    if (active_signal) {
+        engine->idle_tail_frames = (uint32_t)(sr * 3.0f);
+    } else if (engine->idle_tail_frames > 0) {
+        if (engine->idle_tail_frames > frames) engine->idle_tail_frames -= frames;
+        else engine->idle_tail_frames = 0;
+    } else {
+        if (out_l) memset(out_l, 0, frames * sizeof(float));
+        if (out_r) memset(out_r, 0, frames * sizeof(float));
+        return false;
+    }
 
     float block_mix_l[SIMD_BLOCK_SIZE];
     float block_mix_r[SIMD_BLOCK_SIZE];
@@ -256,4 +285,6 @@ void granular_render_block(GranularEngine *engine, float *out_l, float *out_r, u
             if (out_r) out_r[i + k] = out_smp_r;
         }
     }
+
+    return true;
 }

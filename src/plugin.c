@@ -103,11 +103,14 @@ static clap_process_status plugin_process(const struct clap_plugin *plugin, cons
     float *out_l = (process->audio_outputs[0].channel_count > 0) ? process->audio_outputs[0].data32[0] : NULL;
     float *out_r = (process->audio_outputs[0].channel_count > 1) ? process->audio_outputs[0].data32[1] : NULL;
 
-    granular_render_block(&synth->engine, out_l, out_r, process->frames_count);
+    bool is_rendering = granular_render_block(&synth->engine, out_l, out_r, process->frames_count);
+
+    if (!is_rendering) {
+        return CLAP_PROCESS_SLEEP;
+    }
 
     return CLAP_PROCESS_CONTINUE;
 }
-
 static const void* plugin_get_extension(const struct clap_plugin *plugin, const char *id) {
     (void)plugin;
     if (!id) return NULL;

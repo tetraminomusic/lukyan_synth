@@ -34,6 +34,7 @@ typedef struct {
     double sample_rate;
     float playhead;
     uint32_t next_voice_rr;
+    uint32_t idle_tail_frames;
 
     float grain_size_ms;
     float density;
@@ -72,6 +73,6 @@ void granular_set_sustain(GranularEngine *engine, float sustain);
 void granular_set_release(GranularEngine *engine, float release_ms);
 
 void granular_render_sample(GranularEngine *engine, float *out_l, float *out_r);
-void granular_render_block(GranularEngine *engine, float *out_l, float *out_r, uint32_t frames);
+bool granular_render_block(GranularEngine *engine, float *out_l, float *out_r, uint32_t frames);
 
 #endif
