@@ -14,7 +14,7 @@
 
 int main(int argc, char **argv) {
     bool generate_mode = false;
-    const char *golden_file = "golden_reference.bin";
+    const char *golden_file = "tests/golden_reference.bin";
 
     if (argc > 1 && strcmp(argv[1], "--generate") == 0) {
         generate_mode = true;
