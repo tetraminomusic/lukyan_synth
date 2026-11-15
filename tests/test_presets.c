@@ -18,7 +18,7 @@ int main(void) {
     synth->values[PARAM_RESONANCE] = 3.14;
     synth->values[PARAM_REVERB_MIX] = 0.88;
 
-    const char *test_path = "tests/test_temp_preset.lukyan";
+    const char *test_path = "test_temp_preset.lukyan";
 
     bool saved = presets_save_to_file(synth, test_path);
     assert(saved == true);
