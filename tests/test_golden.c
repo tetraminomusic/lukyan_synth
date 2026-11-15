@@ -52,19 +52,28 @@ int main(int argc, char **argv) {
     }
 
     if (generate_mode) {
+        golden_file = "tests/golden_reference.bin";
         FILE *f = fopen(golden_file, "wb");
         if (!f) {
-            fprintf(stderr, "Cannot write golden file: %s\n", golden_file);
+            golden_file = "../tests/golden_reference.bin";
+            f = fopen(golden_file, "wb");
+        }
+        if (!f) {
+            fprintf(stderr, "Cannot write golden file: tests/golden_reference.bin\n");
             return 1;
         }
         fwrite(out_l, sizeof(float), TEST_FRAMES, f);
         fwrite(out_r, sizeof(float), TEST_FRAMES, f);
         fclose(f);
-        printf("[GOLDEN GEN] Successfully generated reference: %s\n", golden_file);
+        printf("[GOLDEN GEN] Successfully generated reference\n");
     } else {
-        FILE *f = fopen(golden_file, "rb");
+        FILE *f = fopen("tests/golden_reference.bin", "rb");
         if (!f) {
-            fprintf(stderr, "[ERROR] Golden reference file missing: %s\n", golden_file);
+            f = fopen("../tests/golden_reference.bin", "rb");
+        }
+        if (!f) {
+            fprintf(stderr, "[ERROR] Golden reference file missing: tests/golden_reference.bin\n");
+            free(out_l); free(out_r); free(synth);
             return 1;
         }
 
