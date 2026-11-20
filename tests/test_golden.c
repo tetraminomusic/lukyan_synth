@@ -26,6 +26,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    srand(42);
     granular_init(&synth->engine, TEST_SAMPLE_RATE);
     params_init_defaults(synth);
 
