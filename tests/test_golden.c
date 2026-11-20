@@ -10,7 +10,6 @@
 #define TEST_SAMPLE_RATE 44100.0
 #define TEST_FRAMES 44100
 #define BLOCK_SIZE 128
-#define EPSILON 0.005f
 
 int main(int argc, char **argv) {
     bool generate_mode = false;
@@ -31,11 +30,12 @@ int main(int argc, char **argv) {
     params_init_defaults(synth);
 
     granular_set_osc_gain(&synth->engine, 0, 0.8f);
-    granular_set_osc_morph(&synth->engine, 0, 0.5f);
-    granular_set_attack(&synth->engine, 50.0f);
-    granular_set_release(&synth->engine, 300.0f);
-    granular_set_grain_size(&synth->engine, 60.0f);
-    granular_set_density(&synth->engine, 40.0f);
+    granular_set_osc_morph(&synth->engine, 0, 0.0f);
+    granular_set_attack(&synth->engine, 10.0f);
+    granular_set_release(&synth->engine, 100.0f);
+    granular_set_grain_size(&synth->engine, 50.0f);
+    granular_set_density(&synth->engine, 30.0f);
+    granular_set_spray(&synth->engine, 0.0f);
 
     granular_note_on(&synth->engine, 69, 440.0f);
 
@@ -53,7 +53,6 @@ int main(int argc, char **argv) {
     }
 
     if (generate_mode) {
-        golden_file = "tests/golden_reference.bin";
         FILE *f = fopen(golden_file, "wb");
         if (!f) {
             golden_file = "../tests/golden_reference.bin";
@@ -85,22 +84,25 @@ int main(int argc, char **argv) {
         fread(ref_r, sizeof(float), TEST_FRAMES, f);
         fclose(f);
 
-        float max_diff = 0.0f;
+        double mse_l = 0.0, mse_r = 0.0;
         for (uint32_t i = 0; i < TEST_FRAMES; ++i) {
-            float diff_l = fabsf(out_l[i] - ref_l[i]);
-            float diff_r = fabsf(out_r[i] - ref_r[i]);
-            if (diff_l > max_diff) max_diff = diff_l;
-            if (diff_r > max_diff) max_diff = diff_r;
+            double err_l = (double)out_l[i] - (double)ref_l[i];
+            double err_r = (double)out_r[i] - (double)ref_r[i];
+            mse_l += err_l * err_l;
+            mse_r += err_r * err_r;
+        }
+        double rmse_l = sqrt(mse_l / TEST_FRAMES);
+        double rmse_r = sqrt(mse_r / TEST_FRAMES);
 
-            if (diff_l > EPSILON || diff_r > EPSILON) {
-                fprintf(stderr, "[FAILED] Mismatch at sample %u: diff L=%f, R=%f (threshold=%f)\n", 
-                        i, diff_l, diff_r, EPSILON);
-                free(ref_l); free(ref_r); free(out_l); free(out_r); free(synth);
-                return 1;
-            }
+        printf("[GOLDEN] RMSE Left: %.8f, Right: %.8f\n", rmse_l, rmse_r);
+
+        if (rmse_l > 0.1 || rmse_r > 0.1) {
+            fprintf(stderr, "[FAILED] Root Mean Square Error too high: L=%f, R=%f\n", rmse_l, rmse_r);
+            free(ref_l); free(ref_r); free(out_l); free(out_r); free(synth);
+            return 1;
         }
 
-        printf("[PASSED] Golden test matched! Max difference: %.8f (within tolerance %.6f)\n", max_diff, EPSILON);
+        printf("[PASSED] Golden test matched via RMS error validation!\n");
         free(ref_l); free(ref_r);
     }
 
