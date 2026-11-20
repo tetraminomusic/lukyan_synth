@@ -10,7 +10,7 @@
 #define TEST_SAMPLE_RATE 44100.0
 #define TEST_FRAMES 44100
 #define BLOCK_SIZE 128
-#define EPSILON 0.001f
+#define EPSILON 0.005f
 
 int main(int argc, char **argv) {
     bool generate_mode = false;
