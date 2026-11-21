@@ -64,46 +64,46 @@ endif()
 
 enable_testing()
 
-add_executable(test_arena tests/test_arena.c src/dsp/arena.c)
-target_include_directories(test_arena PRIVATE include)
-add_test(NAME Unit_ArenaAllocator COMMAND test_arena)
-
-add_executable(test_dsp_math tests/test_dsp_math.c src/dsp/fast_math.c ${SIMD_SOURCE})
-target_include_directories(test_dsp_math PRIVATE include)
-add_test(NAME Unit_DspMathParity COMMAND test_dsp_math)
-
-add_executable(test_presets 
-    tests/test_presets.c 
-    src/dsp/parameters.c 
-    src/platform/presets.c
+set(COMMON_SOURCES
     src/dsp/granular.c
     src/dsp/oscillator.c
     src/dsp/adsr.c
     src/dsp/fx.c
+    src/dsp/parameters.c
     src/dsp/fast_math.c
+    src/dsp/arena.c
+    src/platform/ports.c
+    src/platform/events.c
+    src/platform/presets.c
+    src/gui/gui.c
+    src/gui/gui_draw.c
     ${SIMD_SOURCE}
 )
+
+add_executable(test_arena tests/test_arena.c src/dsp/arena.c)
+target_include_directories(test_arena PRIVATE include src)
+add_test(NAME Unit_ArenaAllocator COMMAND test_arena)
+
+add_executable(test_dsp_math tests/test_dsp_math.c src/dsp/fast_math.c ${SIMD_SOURCE})
+target_include_directories(test_dsp_math PRIVATE include src)
+add_test(NAME Unit_DspMathParity COMMAND test_dsp_math)
+
+add_executable(test_presets tests/test_presets.c src/plugin.c ${COMMON_SOURCES})
 target_include_directories(test_presets PRIVATE include src)
 target_link_libraries(test_presets PRIVATE clap)
-if(WIN32)
+if(APPLE)
+    target_link_libraries(test_presets PRIVATE "-framework Cocoa" "-framework CoreGraphics")
+elseif(WIN32)
     target_link_libraries(test_presets PRIVATE gdi32 user32)
 endif()
 add_test(NAME Unit_PresetSerialization COMMAND test_presets)
 
-
-add_executable(test_golden 
-    tests/test_golden.c
-    src/dsp/parameters.c
-    src/dsp/granular.c
-    src/dsp/oscillator.c
-    src/dsp/adsr.c
-    src/dsp/fx.c
-    src/dsp/fast_math.c
-    ${SIMD_SOURCE}
-)
+add_executable(test_golden tests/test_golden.c src/plugin.c ${COMMON_SOURCES})
 target_include_directories(test_golden PRIVATE include src)
 target_link_libraries(test_golden PRIVATE clap)
-if(WIN32)
+if(APPLE)
+    target_link_libraries(test_golden PRIVATE "-framework Cocoa" "-framework CoreGraphics")
+elseif(WIN32)
     target_link_libraries(test_golden PRIVATE gdi32 user32)
 endif()
 add_test(NAME Integration_GoldenAudio COMMAND test_golden)
