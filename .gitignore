@@ -4,3 +4,5 @@ build/
 .DS_Store
 Testing/
 photo.png
+docs/doxygen/html/
+docs/doxygen/latex/
