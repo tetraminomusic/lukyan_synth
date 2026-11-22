@@ -31,11 +31,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y doxygen graphviz
 
-      - name: Create output directory
-        run: mkdir -p docs/doxygen
+      - name: Verify workspace and create output directory
+        run: |
+          pwd
+          ls -la
+          mkdir -p docs/doxygen
+          ls -la docs/
 
       - name: Generate Documentation
         run: doxygen Doxyfile 2>&1 | grep -v "warning: ignoring unsupported tag" || true
+
+      - name: Verify documentation was generated
+        run: |
+          ls -la docs/doxygen/
+          test -f docs/doxygen/html/index.html && echo "index.html exists!" || (echo "index.html NOT found" && exit 1)
 
       - name: Add .nojekyll file
         run: touch docs/doxygen/html/.nojekyll
