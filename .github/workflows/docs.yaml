@@ -7,7 +7,7 @@ on:
       - 'include/**'
       - 'src/**'
       - 'Doxyfile'
-      - '.github/workflows/docs.yml'
+      - '.github/workflows/documentation.yaml'
   workflow_dispatch:
 
 permissions:
@@ -39,7 +39,8 @@ jobs:
           ls -la docs/
 
       - name: Generate Documentation
-        run: doxygen Doxyfile 2>&1 | grep -v "warning: ignoring unsupported tag" || true
+        run: |
+          doxygen Doxyfile 2>&1 | grep -v "warning: ignoring unsupported tag" || true
 
       - name: Verify documentation was generated
         run: |
