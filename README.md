@@ -1,6 +1,13 @@
 # Lukyan Synth
+![C11](https://img.shields.io/badge/C-C11-blue.svg)
+![AVX2](https://img.shields.io/badge/SIMD-AVX2%20%2B%20FMA-blue.svg)
+![ASM](https://img.shields.io/badge/x86--64-Assembly-red.svg)
+![CLAP](https://img.shields.io/badge/CLAP-1.2.10-green.svg)
+![VST3](https://img.shields.io/badge/VST3-compatible-blueviolet.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
 [![API Docs](https://img.shields.io/badge/API%20Docs-online-brightgreen)](https://tetraminomusic.github.io/lukyan_synth/)
 [![Documentation](https://img.shields.io/badge/docs-doxygen-blue)](docs/doxygen/html/index.html)
+
 
 Полифонический гранулярный синтезатор, реализованный в стандарте CLAP.<br> 
 Проект написан на C с использованием ассемблера x86-64 для оптимизации DSP-обработок. Плагин спроектирован с учётом требований Real-Time Safety, что позволяет работать без аллокаций в аудиопотоке.
@@ -157,8 +164,8 @@ cmake --build . --config Release
 
 ## API-документация
 
-Полная автоматически сгенерированная документация API доступна по следующей 
-**[ссылке](https://tetraminomusic.github.io/lukyan_synth/)**.
+Полная автоматически сгенерированная документация API доступна по
+<a href="https://tetraminomusic.github.io/lukyan_synth/" target="_blank">следующей ссылке</a>.
 
 Документация обновляется автоматически при каждом пуше в `main` через GitHub Actions.
 
