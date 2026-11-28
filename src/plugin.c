@@ -77,9 +77,6 @@ static bool plugin_activate(const struct clap_plugin *plugin, double sample_rate
         gui_render_frame(synth);
     }
 
-    params_init_defaults(synth);
-    presets_init_factory(synth);
-
     return true;
 }
 
