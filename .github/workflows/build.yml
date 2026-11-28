@@ -3,6 +3,7 @@ name: Build CLAP and VST3 Plugins
 on:
   push:
     branches: [ main, master ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
@@ -45,13 +46,17 @@ jobs:
           cp "$WRAPPER_FILE" "build/Release/Lukyan Synth.vst3/Contents/x86_64-win/Lukyan Synth.vst3"
           cp "build/Release/Lukyan Synth.clap" "build/Release/Lukyan Synth.vst3/Contents/Resources/"
 
+      - name: Zip Windows Plugins
+        shell: bash
+        run: |
+          cd build/Release
+          7z a ../../Lukyan-Synth-Windows.zip "Lukyan Synth.clap" "Lukyan Synth.vst3"
+
       - name: Upload Windows Plugins (CLAP + VST3)
         uses: actions/upload-artifact@v4
         with:
           name: Lukyan-Synth-Windows-Complete
-          path: |
-            build/Release/Lukyan Synth.clap
-            build/Release/Lukyan Synth.vst3
+          path: Lukyan-Synth-Windows.zip
 
   build-macos:
     name: Build macOS (Bundle)
@@ -70,8 +75,34 @@ jobs:
       - name: Run Golden Tests
         run: ctest --test-dir build -C Release --output-on-failure
 
+      - name: Zip macOS Plugin
+        run: |
+          cd build
+          zip -r ../Lukyan-Synth-macOS.zip "Lukyan Synth.clap"
+
       - name: Upload macOS Plugin
         uses: actions/upload-artifact@v4
         with:
           name: Lukyan-Synth-macOS
-          path: build/Lukyan Synth.clap
+          path: Lukyan-Synth-macOS.zip
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
